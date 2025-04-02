@@ -5,19 +5,18 @@ from CoolProp.CoolProp import PropsSI
 
 # Your existing parameters and computed states
 
-m_dot = 8.25  # kg/s
-m_dot_river = 1 #kg/s
-m_al = 2   # kg/s
+m_dot = 8.5  # kg/s
+m_al = 2  # kg/s
 q_preheater_per_al = 1e6  # J/kg
 q_reheat_per_al = 0
 q_boiler_per_al = 12.5e6 - q_reheat_per_al
 Q_preheater_total = q_preheater_per_al * m_al
 q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
-
-P_condenser = 0.01e6     
+ 
+P_condenser = 0.1013e6     
 P_boiler = 5e6          
-P_t1out = 4e6           
+P_t1out = 2.75e6           
 T_boiler_out = 773.15   
 eff_turbine = 0.8
 eff_pump = 0.8
@@ -69,42 +68,47 @@ S1 = PropsSI('S','P',P1,'H',H1, fluid)
 #               Organic Rankine Cycle
 #--------------------------%--------------------------
 
-orc_fluid = 'isobutane'
-P_a = 1e6
-P_b = 0.5e6
+orc_fluid = 'Isobutane'
+P_b = 1.6e6
+P_a = 0.1013e6
 T_river = 288.19
 P_river = 0.1013e6
-m_dot_orc = 5
+m_dot_orc = 32
+m_dot_river = 1.5*m_al
 
-# --- State a: After the water condenser, which is the isobutane boiler ---
-Ta = T1 #45.81 C
+# --- State a: After condensation ---
+#H_water_in = PropsSI('H','T',T_river,'P',P_river,fluid)
+#H_water_out = PropsSI('H','T',298.19,'P',P_river,fluid)
+#Q_bc = m_dot_river*(H_water_out - H_water_in)
+#Hc = Hb - Q_bc/m_dot_orc
+Qa = 0
 Pa = P_a
-Ha = PropsSI('H','T',Ta,'P',Pa,orc_fluid)
-Sa = PropsSI('S','T',Ta,'P',Pa,orc_fluid)
+Ha = PropsSI('H','Q',Qa,'P',Pa,orc_fluid)
+Sa = PropsSI('S','Q',Qa,'P',Pa,orc_fluid)
+Ta = PropsSI('T','Q',Qa,'P',Pa,orc_fluid)
 
-# --- State b: After the first expansion cycle ---
+# --- State b: After pump ---
 Pb = P_b
-Hbs = PropsSI('H','S',Sa,'P',Pb,orc_fluid)
-Hb = Ha - (Ha - Hbs)*eff_turbine
-Tb = PropsSI('T','H',Hb,'P',Pb)
-Sb = PropsSI('S','H',Hb,'P',Pb)
+Hbs = PropsSI('H','P',Pb,'S',Sa,orc_fluid)
+Hb = Ha + (Hbs - Ha) / eff_pump
+Tb = PropsSI('T','H',Hb,'P',Pb,orc_fluid)
+Sb = PropsSI('S','H',Hb,'P',Pb,orc_fluid)
 
-# --- State c: After condensation ---
-H_water_in = PropsSI('H','T',T_river,'P',P_river)
-H_water_out = PropsSI('H','T',298.19,'P',P_river)
-Q_bc = m_dot_river*(H_water_out - H_water_in)
-Hc = Hb - Q_bc/m_dot_orc
-Pc = Pb
-Sc = PropsSI('S','H',Hc,'P',Pc,orc_fluid)
-Tc = PropsSI('T','H',Hc,'P',Pc,orc_fluid)
+# --- State c: After the water condenser, which is the isobutane boiler ---
+#q_orc_boiler = (H1 - H2) * m_dot
+Tc = T1
+Pc = P_b
+Hc = PropsSI('H','T',Tc,'P',Pc,orc_fluid)
+Sc = PropsSI('S','T',Tc,'P',Pc,orc_fluid)
 
-# --- State d: After pump ---
+# --- State d: After the first expansion cycle ---
 Pd = P_a
-Hds = PropsSI('H','P',Pd,'S',Sc,orc_fluid)
-Hd = Hc + (Hds - Hc) / eff_pump
+Hds = PropsSI('H','S',Sc,'P',Pd,orc_fluid)
+Hd = Hc - (Hc - Hds)*eff_turbine
 Td = PropsSI('T','H',Hd,'P',Pd,orc_fluid)
 Sd = PropsSI('S','H',Hd,'P',Pd,orc_fluid)
 
+#Currently, we have imaginary cooling. This can be resolved simply by adding a cooling tower of sorts.
 
 # Collect all states in a dict
 # Convert P -> MPa (divide by 1e6), H -> kJ/kg (divide by 1e3), S -> kJ/(kg.K) (divide by 1e3)
@@ -151,19 +155,49 @@ states_data = [
         'T (C)': round(T6 - 273.15, 2),
         'H (kJ/kg)': round(H6/1e3, 2),
         'S (kJ/kg.K)': round(S6/1e3, 2),
-    }
-        
+    },
+    {
+        'State': 'a',
+        'P (MPa)': round(Pa/1e6, 2),
+        'T (C)': round(Ta - 273.15, 2),
+        'H (kJ/kg)': round(Ha/1e3, 2),
+        'S (kJ/kg.K)': round(Sa/1e3, 2),
+    },
+    {
+        'State': 'b',
+        'P (MPa)': round(Pb/1e6, 2),
+        'T (C)': round(Tb - 273.15, 2),
+        'H (kJ/kg)': round(Hb/1e3, 2),
+        'S (kJ/kg.K)': round(Sb/1e3, 2),
+    },
+    {
+        'State': 'c',
+        'P (MPa)': round(Pc/1e6, 2),
+        'T (C)': round(Tc - 273.15, 2),
+        'H (kJ/kg)': round(Hc/1e3, 2),
+        'S (kJ/kg.K)': round(Sc/1e3, 2),
+    },
+    {
+        'State': 'd',
+        'P (MPa)': round(Pd/1e6, 2),
+        'T (C)': round(Td - 273.15, 2),
+        'H (kJ/kg)': round(Hd/1e3, 2),
+        'S (kJ/kg.K)': round(Sd/1e3, 2),
+    },
 ]
 
 # ============= Work math ================
 # Work output
 W_turb1 = (H4 - H5) * m_dot
 W_turb2 = (H6 - H1) * m_dot
+W_turb_orc = (Hc - Hd) * m_dot_orc
 
 W_pump = (H3 - H2) * m_dot
+W_pump_orc = (Hb - Ha) * m_dot_orc
 
-W_net = W_turb1 + W_turb2 - W_pump
-
+W_net_water = W_turb1 + W_turb2 - W_pump
+W_net_orc = W_turb_orc - W_pump_orc
+ACC_power_output = W_turb1 + W_turb2 + W_turb_orc
 
 # ============ Heat math ===============
 # Heat input (should match given totals)
@@ -171,8 +205,17 @@ Q_pre = Q_preheater_total
 Q_boiler = Q_boiler_total
 Q_in = Q_pre + Q_boiler
 
-eta_th = W_net / Q_in
+eta_th_water = W_net_water / Q_in
+orc_Q_in = (Hc - Hb) * m_dot_orc
+eta_th_orc = W_net_orc / orc_Q_in
+eta_total = (W_net_water + W_net_orc) / Q_in
 
+# ============ Cooling math ===============
+
+Q_out_orc = (Hd - Ha) * m_dot_orc
+H_river = PropsSI('H','T',T_river,'P',P_river,fluid)
+H_al_water = H_river + Q_out_orc / m_dot_river
+T_al_water = PropsSI('T','H',H_al_water,'P',P_river,fluid)
 
 # ================= H2 Theoretical Work ================
 # ==== H2 output
@@ -193,9 +236,12 @@ Q_dot_H2 = m_H2 * LHV_H2  *eff_fc      # J/s
 # Convert to kW
 Q_dot_H2_kW = Q_dot_H2 / 1000  # kW 
 
-work_kWh_per_tonne = (W_net + Q_dot_H2) * 1000 / (3.6e6 *m_al)
+work_kWh_per_tonne = (W_net_water + W_net_orc + Q_dot_H2) * 1000 / (3.6e6 *m_al)
 print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")
-print(f"Thermal efficiency: {eta_th*100:.2f} %")
+print(f"Thermal efficiency of Steam Rankine Cycle: {eta_th_water*100:.2f} %")
+print(f"Thermal efficiency of Organic Rankine Cycle: {eta_th_orc*100:.2f} %")
+print(f"Thermal efficiency of Total Cycle: {eta_total*100:.2f} %")
+print(f"Actual Power Output {(ACC_power_output/1e6):.2f} MW")
 
 df_states = pd.DataFrame(states_data)
 print("\n=== Thermodynamic States ===")
