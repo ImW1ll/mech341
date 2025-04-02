@@ -5,8 +5,8 @@ from CoolProp.CoolProp import PropsSI
 
 # Your existing parameters and computed states
 
-m_dot = 8.5  # kg/s
-m_al = 2  # kg/s
+m_dot = 43  # kg/s
+m_al = 9.25  # kg/s
 q_preheater_per_al = 1e6  # J/kg
 q_reheat_per_al = 0
 q_boiler_per_al = 12.5e6 - q_reheat_per_al
@@ -15,9 +15,9 @@ q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
 P_condenser = 0.1013e6     
-P_boiler = 5e6          
-P_t1out = 2.75e6           
-T_boiler_out = 773.15   
+P_boiler = 22.2e6          
+P_t1out = 10e6           
+T_boiler_out = 773.15
 eff_turbine = 0.8
 eff_pump = 0.8
 fluid = 'Water'
@@ -197,7 +197,6 @@ W_pump_orc = (Hb - Ha) * m_dot_orc
 
 W_net_water = W_turb1 + W_turb2 - W_pump
 W_net_orc = W_turb_orc - W_pump_orc
-ACC_power_output = W_turb1 + W_turb2 + W_turb_orc
 
 # ============ Heat math ===============
 # Heat input (should match given totals)
@@ -218,7 +217,7 @@ H_al_water = H_river + Q_out_orc / m_dot_river
 T_al_water = PropsSI('T','H',H_al_water,'P',P_river,fluid)
 
 # ================= H2 Theoretical Work ================
-# ==== H2 output
+# ==== H2 output ====
 M_Al = 26.98      # g/mol
 M_H2 = 2.016      # g/mol
 LHV_H2 = 120e6    # J/kg heating value of H2
@@ -231,12 +230,23 @@ kg_H2_per_kg_Al = (3 * M_H2) / (2 * M_Al)  # around 0.1117 kg
 m_H2 = m_al * kg_H2_per_kg_Al  # kg/s of H2, which is still 0.1117kg/s
 
 # Chemical energy flow rate in hydrogen (W = J/s)
-Q_dot_H2 = m_H2 * LHV_H2  *eff_fc      # J/s
+Q_dot_H2_chem = m_H2 * LHV_H2  *eff_fc      # J/s
+
+# Expansion of H2 through a gas turbine
+HH1 = PropsSI('H','T',T_boiler_out,'P',30e6,'hydrogen')
+SH1 = PropsSI('H','T',T_boiler_out,'P',30e6,'hydrogen')
+HH2s = PropsSI('H','S',SH1,'P',0.1013e6,'hydrogen')
+HH2 = HH1 + (HH2s - HH1) * eff_turbine
+W_dot_H2_brayton = (HH1 - HH2) * m_H2
+
+W_dot_H2 = Q_dot_H2_chem + W_dot_H2_brayton
 
 # Convert to kW
-Q_dot_H2_kW = Q_dot_H2 / 1000  # kW 
+W_dot_H2_kW = W_dot_H2 / 1000  # kW 
 
-work_kWh_per_tonne = (W_net_water + W_net_orc + Q_dot_H2) * 1000 / (3.6e6 *m_al)
+ACC_power_output = W_turb1 + W_turb2 + W_turb_orc + Q_dot_H2_chem
+
+work_kWh_per_tonne = (W_net_water + W_net_orc + Q_dot_H2_chem) * 1000 / (3.6e6 *m_al)
 print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")
 print(f"Thermal efficiency of Steam Rankine Cycle: {eta_th_water*100:.2f} %")
 print(f"Thermal efficiency of Organic Rankine Cycle: {eta_th_orc*100:.2f} %")
