@@ -63,7 +63,6 @@ H1 = H6 - (H6 - H1s)*eff_turbine
 T1 = PropsSI('T','P',P1,'H',H1, fluid)
 S1 = PropsSI('S','P',P1,'H',H1, fluid)
 
-
 # Collect all states in a dict
 # Convert P -> MPa (divide by 1e6), H -> kJ/kg (divide by 1e3), S -> kJ/(kg.K) (divide by 1e3)
 # Round to 2 decimals
