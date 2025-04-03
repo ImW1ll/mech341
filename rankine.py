@@ -16,11 +16,13 @@ Q_preheater_total = q_preheater_per_al * m_al
 q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
-P_condenser = 0.01e6     
-P_stage_1 = 25e6          
-P_stage_2 = 12e6
-P_bleed_1 = 10e6
-P_bleed_2 = 4e6           
+
+P_boiler   = 25e6   # Steam generation pressure
+P_bleed_1  = 10e6    # Pressure at which turbine 1 bleeds steam
+P_condenser = 0.01e6 # Expansion continues to condenser pressure
+
+
+#P_bleed_2 = 4e6           
 T_boiler_out = 773.15
 eff_turbine = 0.85
 eff_pump = 0.9
@@ -39,7 +41,7 @@ T1 = PropsSI('T','P',P1,'Q',Q1, fluid)
 Sens1 = sensible_enthalpy_PT(P1, T1)
 
 # --- State 2: After compressor 1 ---
-P2 = P_bleed_2
+P2 = P_bleed_1
 H2s = PropsSI('H','P',P2,'S',S1, fluid)
 H2 = H1 + (H2s - H1) / eff_pump
 S2 = PropsSI('S','P',P2,'H',H2, fluid)
@@ -47,7 +49,7 @@ T2 = PropsSI('T','P',P2,'H',H2, fluid)
 Sens2 = sensible_enthalpy_PT(P2, T2)
 
 # --- State 3: After OFWH 1 ---
-P3 = P_bleed_2
+P3 = P_bleed_1
 Q3 = 0
 H3 = PropsSI('H','P',P3,'Q',Q3,fluid)
 S3 = PropsSI('S','P',P3,'Q',Q3,fluid)
@@ -55,52 +57,40 @@ T3 = PropsSI('T','P',P3,'Q',Q3,fluid)
 Sens3 = sensible_enthalpy_PT(P3, T3)
 
 # --- State 4: After compressor 2 ---
-P4 = P_bleed_1
+P4 = P_boiler
 H4s = PropsSI('H','P',P4,'S',S3,fluid)
 H4 = H3 + (H4s - H3) / eff_pump
 S4 = PropsSI('S','P',P4,'H',H4,fluid)
 T4 = PropsSI('T','P',P4,'H',H4,fluid)
 Sens4 = sensible_enthalpy_PT(P4, T4)
 
-# --- State 5: OFWH 2 ---
-P5 = P_bleed_1
-Q5 = 0
-H5 = PropsSI('H','P',P5,'Q',Q5,fluid)
-S5 = PropsSI('S','P',P5,'Q',Q5,fluid)
-T5 = PropsSI('T','P',P5,'Q',Q5,fluid)
-Sens5 = sensible_enthalpy_PT(P5, T5)
-
-# --- State 6: After compressor 3 ---
-P6 = P_stage_1
-H6s = PropsSI('H','P',P6,'S',S5,fluid)
-H6 = H5 + (H6s - H5) / eff_pump
-S6 = PropsSI('S','P',P6,'H',H6,fluid)
-T6 = PropsSI('T','P',P6,'H',H6,fluid)
-Sens6 = sensible_enthalpy_PT(P6, T6)
-
 # --- State 7: After boiler (to turbine inlet) ---
 # Add Q_boiler/m_dot to H3
-H7 = H6 + Q_boiler_total / m_dot
-P7 = P_stage_1
-T7 = PropsSI('T','P',P7,'H',H7, fluid)
-S7 = PropsSI('S','P',P7,'H',H7, fluid)
-Sens7 = sensible_enthalpy_PT(P7, T7)
+H5 = H4 + Q_boiler_total / m_dot
+P5 = P_boiler
+T5 = PropsSI('T','P',P5,'H',H5, fluid)
+S5 = PropsSI('S','P',P5,'H',H5, fluid)
+Sens5 = sensible_enthalpy_PT(P5, T5)
 
 # --- State 8: After first turbine ---
-P8 = P_stage_2
-H8s = PropsSI('H','S',S7,'P',P8, fluid)
-H8 = H7 + (H8s - H7) * eff_turbine
-T8 = PropsSI('T','P',P8,'H',H8, fluid)
-S8 = PropsSI('S','P',P8,'H',H8, fluid)
-Sens8 = sensible_enthalpy_PT(P8, T8)
+P6 = P_bleed_1
+H6s = PropsSI('H','S',S5,'P',P6, fluid)
+H6 = H5 + (H6s - H5) * eff_turbine
+T6 = PropsSI('T','P',P6,'H',H6, fluid)
+S6 = PropsSI('S','P',P6,'H',H6, fluid)
+Sens6 = sensible_enthalpy_PT(P6, T6)
+
+x_frac = (H3 - H2) / (H6 - H2)
+print(x_frac)
 
 # ---- State 9: After reheat between turbine 1 and turbine 2 -----
-H9 = H8 + Q_preheater_total / m_dot
-P9 = P_stage_2
-S9 = PropsSI('S','P',P9,'H',H9,fluid)
-T9 = PropsSI('T','P',P9,'H',H9,fluid)
-Sens9 = sensible_enthalpy_PT(P9, T9)
+H7 = H6 + Q_preheater_total / (m_dot*(1-x_frac))
+P7 = P_bleed_1
+S7 = PropsSI('S','P',P7,'H',H7,fluid)
+T7 = PropsSI('T','P',P7,'H',H7,fluid)
+Sens7 = sensible_enthalpy_PT(P7, T7)
 
+"""
 # --- State 10I: First Bled Water ---
 P10I = P_bleed_1
 H10Is = PropsSI('H','P',P10I,'S',S9,fluid)
@@ -117,35 +107,34 @@ S10II = PropsSI('S','P',P10II,'H',H10II,fluid)
 T10II = PropsSI('T','P',P10II,'H',H10II,fluid)
 Sens10II = sensible_enthalpy_PT(P10II, T10II)
 
+"""
+
 # --- State 10: After second turbine, before condenser ---
-P10 = P_condenser
-H10s = PropsSI('H','S',S10II,'P',P10, fluid)
+P8 = P_condenser
+H8s = PropsSI('H','S',S7,'P',P8, fluid)
 # Notice the sign in the standard isentropic step is H1s - H6, but you added (H6 - H1s)/eff_turbine 
-H10 = H10II - (H10II - H10s) * eff_turbine
-T10 = PropsSI('T','P',P10,'H',H10, fluid)
-S10 = PropsSI('S','P',P10,'H',H10, fluid)
-Sens10 = sensible_enthalpy_PT(P10, T10)
+H8 = H7 - (H7 - H8s) * eff_turbine
+T8 = PropsSI('T','P',P8,'H',H8, fluid)
+S8 = PropsSI('S','P',P8,'H',H8, fluid)
+Sens8 = sensible_enthalpy_PT(P8, T8)
 
 #--------------------------%--------------------------
 #              Mass Flow Rate Calculations
 #--------------------------%--------------------------
 
-y_frac = (H5 - H4) / (H10I - H4)
-x_frac = (1 - y_frac) * (H2 + H3) / (H10II - H2)
-m_frac = 1-x_frac-y_frac
-assert (m_frac + y_frac + x_frac) == 1, "Issue with Mass Fraction: maybe check enthalpy compatibility?"
+m_frac = 1 - x_frac
+assert (m_frac + x_frac) == 1, "Issue with Mass Fraction: maybe check enthalpy compatibility?" # this will never trigger as you anyway say 1 = m_frac + x_frac on the line above
 
 
 # ============= Work math ================
 # Work output
-W_turb1 = (H7 - H8) * m_dot
-W_turb2 = m_dot * ((H9 - H10I) + (H10I - H10II)*(1-y_frac) + (H10II - H10)*(1-x_frac-y_frac))
+W_turb1 = (H5 - H6) * m_dot
+W_turb2 = m_dot * (H7 - H8)*(1-x_frac)
 
-W_pump_1 = (H2 - H1) * (1-x_frac-y_frac) * m_dot
-W_pump_2 = (H4 - H3) * (1-y_frac) * m_dot
-W_pump_3 = (H6 - H5) * m_dot
+W_pump_1 = (H2 - H1) * (1-x_frac) * m_dot
+W_pump_2 = (H4 - H3) * m_dot
 
-W_net_water = W_turb1 + W_turb2 - W_pump_1 - W_pump_2 - W_pump_3
+W_net_water = W_turb1 + W_turb2 - W_pump_1  - W_pump_2
 
 
 # ============ Heat math ===============
@@ -290,38 +279,6 @@ states_data = [
         'H (kJ/kg)': round(H8/1e3, 2),
         'S (kJ/kg.K)': round(S8/1e3, 2),
         'Sens. H': Sens8 / 1000,
-    },
-    {
-        'State': '9',
-        'P (MPa)': round(P9/1e6, 2),
-        'T (C)': round(T9 - 273.15, 2),
-        'H (kJ/kg)': round(H9/1e3, 2),
-        'S (kJ/kg.K)': round(S9/1e3, 2),
-        'Sens. H': Sens9 / 1000,
-    },
-    {
-        'State': '10',
-        'P (MPa)': round(P10/1e6, 2),
-        'T (C)': round(T10 - 273.15, 2),
-        'H (kJ/kg)': round(H10/1e3, 2),
-        'S (kJ/kg.K)': round(S10/1e3, 2),
-        'Sens. H': Sens10 / 1000,
-    },
-    {
-        'State': '10I',
-        'P (MPa)': round(P10I/1e6, 2),
-        'T (C)': round(T10I - 273.15, 2),
-        'H (kJ/kg)': round(H10I/1e3, 2),
-        'S (kJ/kg.K)': round(S10I/1e3, 2),
-        'Sens. H': Sens10I / 1000,
-    },
-    {
-        'State': '10II',
-        'P (MPa)': round(P10II/1e6, 2),
-        'T (C)': round(T10II - 273.15, 2),
-        'H (kJ/kg)': round(H10II/1e3, 2),
-        'S (kJ/kg.K)': round(S10II/1e3, 2),
-        'Sens. H': Sens10II / 1000,
     },
     {
         'State': 'B2',
