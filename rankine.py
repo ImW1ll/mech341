@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from CoolProp.CoolProp import PropsSI
-from brayton_cycle import *
+from brayton import *
 
 # Your existing parameters and computed states
 
