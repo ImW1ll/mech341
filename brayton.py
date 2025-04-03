@@ -1,11 +1,8 @@
 import math
+from CoolProp.CoolProp import PropsSI
 
-# 1) Polynomials for cp in kJ/(kmol.K) and the converter to J/(kg.K)
+# 1) Polynomials for cp thanks to book
 def cp_air_kj_per_kmolK(T):
-    """
-    Returns cp of air in kJ/(kmol.K) at temperature T [K].
-    Example polynomial constants below.
-    """
     a = 28.11
     b = 0.1967e-2
     c = 0.4802e-5
@@ -13,15 +10,13 @@ def cp_air_kj_per_kmolK(T):
     return a + b*T + c*(T**2) + d*(T**3)
 
 def cp_air_j_per_kgK(T):
-    """
-    Returns cp of air in J/(kg.K) at temperature T [K],
-    using the polynomial above.
-    """
-    # Molar mass of air [kg/kmol]
+    # Molar mass of air [kg/kmol] cos the book give it in kmol?...
     M_air = 28.97
     cp_kj_per_kmolK = cp_air_kj_per_kmolK(T)
     cp_j_per_kgK = (cp_kj_per_kmolK * 1000.0) / M_air
     return cp_j_per_kgK
+
+
 
 def brayton_cycle_h2(
     m_H2,            # [kg/s] mass flow of hydrogen
