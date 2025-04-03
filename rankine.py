@@ -4,122 +4,245 @@ import matplotlib.pyplot as plt
 from CoolProp.CoolProp import PropsSI
 from brayton_cycle import *
 
-# =============== GIVEN PARAMETERS ======================
-m_dot = 8.5*10      # kg/s
-m_al = 2*10           # kg/s
-q_preheater_per_al = 1.5e6  # J/kg
-q_reheat_per_al    = 0
-q_boiler_per_al    = 12.5e6 - q_reheat_per_al
-Q_preheater_total  = q_preheater_per_al * m_al
-q_reheat_total     = q_reheat_per_al * m_al
-Q_boiler_total     = q_boiler_per_al * m_al
+# Your existing parameters and computed states
 
-P_condenser = 0.01e6
-P_boiler    = 23e6
-P_t1out     = 5e6
-T_boiler_out = 773.15   # 500 °C
+m_dot = 65  # kg/s
+m_al = 8.75  # kg/s
+q_preheater_per_al = 1e6  # J/kg
+q_reheat_per_al = 0
+q_boiler_per_al = 12.5e6 - q_reheat_per_al
+Q_preheater_total = q_preheater_per_al * m_al
+q_reheat_total = q_reheat_per_al * m_al
+Q_boiler_total = q_boiler_per_al * m_al
+ 
+P_condenser = 0.01e6     
+P_stage_1 = 22.2e6          
+P_stage_2 = 12e6
+P_bleed_1 = 10e6
+P_bleed_2 = 4e6           
+T_boiler_out = 773.15
 eff_turbine = 0.85
-eff_pump    = 0.85
-fluid       = 'Water'
+eff_pump = 0.9
+fluid = 'Water'
 
-# =============== HELPER FUNCTIONS ======================
-def pump_enthalpy(h_in, s_in, P_out, eta):
-    h_s_out = PropsSI('H', 'P', P_out, 'S', s_in, fluid)
-    h_out   = h_in + (h_s_out - h_in)/eta
-    return h_out
-
-def turbine_enthalpy(h_in, s_in, P_out, eta):
-    h_s_out = PropsSI('H','P',P_out,'S', s_in, fluid)
-    h_out   = h_in - eta*(h_in - h_s_out)
-    return h_out
-
-# --- State 2: After condenser (saturated liquid) ---
-P2 = P_condenser
-H2 = PropsSI('H','P',P2,'Q',0, fluid)
-S2 = PropsSI('S','P',P2,'Q',0, fluid)
-T2 = PropsSI('T','P',P2,'Q',0, fluid)
-
-# --- State 3: After pump from P_condenser -> P_t1out ---
-P3 = P_t1out
-H3 = pump_enthalpy(H2, S2, P3, eff_pump)
-S3 = PropsSI('S','P',P3,'H',H3, fluid)
-T3 = PropsSI('T','P',P3,'H',H3, fluid)
-
-# --- State 4: After boiler (to turbine inlet) ---
-# Add Q_boiler_total/m_dot to H3
-H4 = H3 + Q_boiler_total / m_dot
-P4 = P_boiler
-# We find T4, S4 from P4, H4
-T4 = PropsSI('T','P',P4,'H',H4, fluid)
-S4 = PropsSI('S','P',P4,'H',H4, fluid)
-
-# --- State 5: After first turbine (expand from P4 -> P_t1out) ---
-H5 = turbine_enthalpy(H4, S4, P_t1out, eff_turbine)
-P5 = P_t1out
-T5 = PropsSI('T','P',P5,'H',H5, fluid)
-S5 = PropsSI('S','P',P5,'H',H5, fluid)
-
-# --- State 6: After "reheat" between turbine 1 and turbine 2 -----
-# Adds Q_preheater_total / m_dot
-H6 = H5 + Q_preheater_total / m_dot
-P6 = P5
-T6 = PropsSI('T','P',P6,'H',H6, fluid)
-S6 = PropsSI('S','P',P6,'H',H6, fluid)
-
-# --- State 1: After second turbine, before condenser ---
-# Expand from P6 -> P_condenser
+# --- State 1: After condenser (saturated liquid) ---
 P1 = P_condenser
-H1 = turbine_enthalpy(H6, S6, P1, eff_turbine) 
-T1 = PropsSI('T','P',P1,'H',H1, fluid)
-S1 = PropsSI('S','P',P1,'H',H1, fluid)
+Q1 = 0
+H1 = PropsSI('H','P',P1,'Q',Q1, fluid)
+S1 = PropsSI('S','P',P1,'Q',Q1, fluid)
+T1 = PropsSI('T','P',P1,'Q',Q1, fluid)
 
-# ============= CREATE DICTIONARY OF STATES ============
+# --- State 2: After compressor 1 ---
+P2 = P_bleed_2
+H2s = PropsSI('H','P',P2,'S',S1, fluid)
+H2 = H1 + (H2s - H1) / eff_pump
+S2 = PropsSI('S','P',P2,'H',H2, fluid)
+T2 = PropsSI('T','P',P2,'H',H2, fluid)
+
+# --- State 3: After OFWH 1 ---
+P3 = P_bleed_2
+Q3 = 0
+H3 = PropsSI('H','P',P3,'Q',Q3,fluid)
+S3 = PropsSI('S','P',P3,'Q',Q3,fluid)
+T3 = PropsSI('T','P',P3,'Q',Q3,fluid)
+
+# --- State 4: After compressor 2 ---
+P4 = P_bleed_1
+H4s = PropsSI('H','P',P4,'S',S3,fluid)
+H4 = H3 + (H4s - H3) / eff_pump
+S4 = PropsSI('S','P',P4,'H',H4,fluid)
+T4 = PropsSI('T','P',P4,'H',H4,fluid)
+
+# --- State 5: OFWH 2 ---
+P5 = P_bleed_1
+Q5 = 0
+H5 = PropsSI('H','P',P5,'Q',Q5,fluid)
+S5 = PropsSI('S','P',P5,'Q',Q5,fluid)
+T5 = PropsSI('T','P',P5,'Q',Q5,fluid)
+
+# --- State 6: After compressor 3 ---
+P6 = P_stage_1
+H6s = PropsSI('H','P',P6,'S',S5,fluid)
+H6 = H5 + (H6s - H5) / eff_pump
+S6 = PropsSI('S','P',P6,'H',H6,fluid)
+T6 = PropsSI('T','P',P6,'H',H6,fluid)
+
+# --- State 7: After boiler (to turbine inlet) ---
+# Add Q_boiler/m_dot to H3
+H7 = H6 + Q_boiler_total / m_dot
+P7 = P_stage_1
+T7 = PropsSI('T','P',P7,'H',H7, fluid)
+S7 = PropsSI('S','P',P7,'H',H7, fluid)
+
+# --- State 8: After first turbine ---
+P8 = P_stage_2
+H8s = PropsSI('H','S',S7,'P',P8, fluid)
+H8 = H7 + (H8s - H7) * eff_turbine
+T8 = PropsSI('T','P',P8,'H',H8, fluid)
+S8 = PropsSI('S','P',P8,'H',H8, fluid)
+
+# ---- State 9: After reheat between turbine 1 and turbine 2 -----
+H9 = H8 + Q_preheater_total / m_dot
+P9 = P_stage_2
+S9 = PropsSI('S','P',P9,'H',H9,fluid)
+T9 = PropsSI('T','P',P9,'H',H9,fluid)
+
+# --- State 10I: First Bled Water ---
+P10I = P_bleed_1
+H10Is = PropsSI('H','P',P10I,'S',S9,fluid)
+H10I = H9 - (H9 - H10Is) * eff_turbine
+S10I = PropsSI('S','P',P10I,'H',H10I,fluid)
+T10I = PropsSI('T','P',P10I,'H',H10I,fluid)
+
+# --- State 10II: Second Bled Water ---
+P10II = P_bleed_2
+H10IIs = PropsSI('H','P',P10II,'S',S10I,fluid)
+H10II = H10I - (H10I - H10IIs) * eff_turbine
+S10II = PropsSI('S','P',P10II,'H',H10II,fluid)
+T10II = PropsSI('T','P',P10II,'H',H10II,fluid)
+
+# --- State 10: After second turbine, before condenser ---
+P10 = P_condenser
+H10s = PropsSI('H','S',S10II,'P',P10, fluid)
+# Notice the sign in the standard isentropic step is H1s - H6, but you added (H6 - H1s)/eff_turbine 
+H10 = H10II - (H10II - H10s) * eff_turbine
+T10 = PropsSI('T','P',P10,'H',H10, fluid)
+S10 = PropsSI('S','P',P10,'H',H10, fluid)
+
+#--------------------------%--------------------------
+#              Mass Flow Rate Calculations
+#--------------------------%--------------------------
+
+y_frac = (H5 - H4) / (H10I - H4)
+x_frac = (1 - y_frac) * (H2 + H3) / (H10II - H2)
+m_frac = 1-x_frac-y_frac
+assert(m_frac + y_frac + x_frac == 1,"Issue with Mass Fraction: maybe check enthalpy compatibility?")
+
+
+# Collect all states in a dict
+# Convert P -> MPa (divide by 1e6), H -> kJ/kg (divide by 1e3), S -> kJ/(kg.K) (divide by 1e3)
+# Round to 2 decimals
 states_data = [
     {
         'State': '1',
         'P (MPa)': round(P1/1e6, 2),
-        'T (°C)':  round(T1 - 273.15, 2),
-        'H (kJ/kg)':round(H1/1e3, 2),
-        'S (kJ/kg.K)':round(S1/1e3, 2),
+        'T (C)': round(T1 - 273.15, 2),
+        'H (kJ/kg)': round(H1/1e3, 2),
+        'S (kJ/kg.K)': round(S1/1e3, 2),
     },
     {
         'State': '2',
         'P (MPa)': round(P2/1e6, 2),
-        'T (°C)':  round(T2 - 273.15, 2),
-        'H (kJ/kg)':round(H2/1e3, 2),
-        'S (kJ/kg.K)':round(S2/1e3, 2),
+        'T (C)': round(T2 - 273.15, 2),
+        'H (kJ/kg)': round(H2/1e3, 2),
+        'S (kJ/kg.K)': round(S2/1e3, 2),
     },
     {
         'State': '3',
         'P (MPa)': round(P3/1e6, 2),
-        'T (°C)':  round(T3 - 273.15, 2),
-        'H (kJ/kg)':round(H3/1e3, 2),
-        'S (kJ/kg.K)':round(S3/1e3, 2),
+        'T (C)': round(T3 - 273.15, 2),
+        'H (kJ/kg)': round(H3/1e3, 2),
+        'S (kJ/kg.K)': round(S3/1e3, 2),
     },
     {
         'State': '4',
         'P (MPa)': round(P4/1e6, 2),
-        'T (°C)':  round(T4 - 273.15, 2),
-        'H (kJ/kg)':round(H4/1e3, 2),
-        'S (kJ/kg.K)':round(S4/1e3, 2),
+        'T (C)': round(T4 - 273.15, 2),
+        'H (kJ/kg)': round(H4/1e3, 2),
+        'S (kJ/kg.K)': round(S4/1e3, 2),
     },
     {
         'State': '5',
         'P (MPa)': round(P5/1e6, 2),
-        'T (°C)':  round(T5 - 273.15, 2),
-        'H (kJ/kg)':round(H5/1e3, 2),
-        'S (kJ/kg.K)':round(S5/1e3, 2),
+        'T (C)': round(T5 - 273.15, 2),
+        'H (kJ/kg)': round(H5/1e3, 2),
+        'S (kJ/kg.K)': round(S5/1e3, 2),
     },
     {
         'State': '6',
         'P (MPa)': round(P6/1e6, 2),
-        'T (°C)':  round(T6 - 273.15, 2),
-        'H (kJ/kg)':round(H6/1e3, 2),
-        'S (kJ/kg.K)':round(S6/1e3, 2),
+        'T (C)': round(T6 - 273.15, 2),
+        'H (kJ/kg)': round(H6/1e3, 2),
+        'S (kJ/kg.K)': round(S6/1e3, 2),
+    },
+    {
+        'State': '7',
+        'P (MPa)': round(P7/1e6, 2),
+        'T (C)': round(T7 - 273.15, 2),
+        'H (kJ/kg)': round(H7/1e3, 2),
+        'S (kJ/kg.K)': round(S7/1e3, 2),
+    },
+    {
+        'State': '8',
+        'P (MPa)': round(P8/1e6, 2),
+        'T (C)': round(T8 - 273.15, 2),
+        'H (kJ/kg)': round(H8/1e3, 2),
+        'S (kJ/kg.K)': round(S8/1e3, 2),
+    },
+    {
+        'State': '9',
+        'P (MPa)': round(P9/1e6, 2),
+        'T (C)': round(T9 - 273.15, 2),
+        'H (kJ/kg)': round(H9/1e3, 2),
+        'S (kJ/kg.K)': round(S9/1e3, 2),
+    },
+    {
+        'State': '10',
+        'P (MPa)': round(P10/1e6, 2),
+        'T (C)': round(T10 - 273.15, 2),
+        'H (kJ/kg)': round(H10/1e3, 2),
+        'S (kJ/kg.K)': round(S10/1e3, 2),
+    },
+    {
+        'State': '10I',
+        'P (MPa)': round(P10I/1e6, 2),
+        'T (C)': round(T10I - 273.15, 2),
+        'H (kJ/kg)': round(H10I/1e3, 2),
+        'S (kJ/kg.K)': round(S10I/1e3, 2),
+    },
+    {
+        'State': '10II',
+        'P (MPa)': round(P10II/1e6, 2),
+        'T (C)': round(T10II - 273.15, 2),
+        'H (kJ/kg)': round(H10II/1e3, 2),
+        'S (kJ/kg.K)': round(S10II/1e3, 2),
     }
 ]
 
-# ============== H2 turbine ====================
+# ============= Work math ================
+# Work output
+W_turb1 = (H7 - H8) * m_dot
+W_turb2 = m_dot * ((H9 - H10I) + (H10I - H10II)*(1-y_frac) + (H10II - H10)*(1-x_frac-y_frac))
+
+W_pump_1 = (H2 - H1) * (1-x_frac-y_frac) * m_dot
+W_pump_2 = (H4 - H3) * (1-y_frac) * m_dot
+W_pump_3 = (H6 - H5) * m_dot
+
+W_net_water = W_turb1 + W_turb2 - W_pump_1 - W_pump_2 - W_pump_3
+
+
+# ============ Heat math ===============
+# Heat input (should match given totals)
+Q_pre = Q_preheater_total
+Q_boiler = Q_boiler_total
+Q_in = Q_pre + Q_boiler
+
+eta_th_water = W_net_water / Q_in
+eta_total = (W_net_water) / Q_in
+
+# ============ Cooling math ===============
+orc_fluid = 'Isobutane'
+P_b = 1.6e6
+P_a = 0.1013e6
+T_river = 288.19
+P_river = 0.1013e6
+m_dot_orc = 32
+m_dot_river = 1.5*m_al
+H_river = PropsSI('H','T',T_river,'P',P_river,fluid)
+H_al_water = H_river / m_dot_river
+T_al_water = PropsSI('T','H',H_al_water,'P',P_river,fluid)
+
+# ================= H2 Theoretical Work ================
 # we need ceramic coating and really good coating
 # Out of the reactor the H2 is at 300bar and 500C
 M_Al = 26.98
@@ -146,28 +269,6 @@ H2T_out = PropsSI('T', 'H', h_out, 'P', PH2_out, 'Hydrogen')
 
 w_TurbH2 = (HH2 - h_out) * m_H2
 
-
-# ============= Work and Efficiency Math ================
-W_turb1 = (H4 - H5) * m_dot
-W_turb2 = (H6 - H1) * m_dot
-W_pump  = (H3 - H2) * m_dot
-
-W_net = W_turb1 + W_turb2 - W_pump + w_TurbH2
-
-Q_pre = Q_preheater_total
-Q_boiler = Q_boiler_total
-Q_in = Q_pre + Q_boiler
-
-
-# ============== H2 TURBINE (BRAYTON CYCLE) ====================
-# From stoichiometry or reaction, the H2 mass flow per kg Al:
-M_Al = 26.98
-M_H2 = 2.016
-kg_H2_per_kg_Al = (3*M_H2)/(2*M_Al)  # ~0.1117
-
-m_H2 = m_al * kg_H2_per_kg_Al       # [kg/s] mass flow of hydrogen
-LHV_H2 = 120e6                      # J/kg (hydrogen lower heating value)
-
 # -- Brayton-cycle parameters (replace with real design if needed) --
 T_in_C = 200.58         # Inlet H2 temperature (°C) - or use your known T_in
 T_in   = T_in_C + 273.15 # K
@@ -175,7 +276,7 @@ P_in_bar = 1.0
 P_in = P_in_bar*1e5     # 1 bar -> Pa
 
 # For the simplest case, assume you have enough air to keep T3 within reason:
-m_air = 5.0             # [kg/s], adjust to control turbine inlet temp
+m_air = 80             # [kg/s], adjust to control turbine inlet temp
 pr = 10.0               # overall pressure ratio
 cp_air = 1005.0         # J/(kg*K)
 gamma_air = 1.4
@@ -186,43 +287,27 @@ eta_turb = 0.90         # turbine isentropic efficiency
 # -- Get the net Brayton output power [W] for the hydrogen cycle --
 W_br, T2_br, T3_br, T4_br = brayton_cycle_h2(m_H2, T_in, P_in,
                                             pr,
-                                            cp_air, gamma_air, 
+                                            gamma_air, 
                                             LHV_H2, m_air,
                                             eta_comp=eta_comp,
                                             eta_turb=eta_turb)
 
-# ============= Work and Efficiency Math (Rankine + H2) ================
-W_turb1 = (H4 - H5) * m_dot
-W_turb2 = (H6 - H1) * m_dot
-W_pump  = (H3 - H2) * m_dot
+# Expansion of H2 through a gas turbine
+'''HH1 = PropsSI('H','T',T_boiler_out,'P',30e6,'hydrogen')
+SH1 = PropsSI('H','T',T_boiler_out,'P',30e6,'hydrogen')
+HH2s = PropsSI('H','S',SH1,'P',0.1013e6,'hydrogen')
+HH2 = HH1 + (HH2s - HH1) * eff_turbine
+W_dot_H2_brayton = (HH1 - HH2) * m_H2'''
 
-# Combine Rankine net with Brayton net
-#   (Rankine net = W_turb1 + W_turb2 - W_pump)
-W_net_rankine = W_turb1 + W_turb2 - W_pump
+print(f"New brayton shaft power {W_br:.2f}")
+ACC_power_output = W_turb1 + W_turb2 + w_TurbH2 + W_br
 
-# Add the hydrogen Brayton cycle
-W_net_total = W_net_rankine + W_br
-
-Q_pre = Q_preheater_total
-Q_boiler = Q_boiler_total
-Q_in = Q_pre + Q_boiler
-
-eta_th = W_net_rankine / Q_in  # if you only want the Rankine's "thermal" efficiency
-
-# For "total" output from both cycles per mass of Al, you might do:
-work_kWh_per_tonne = (W_net_total)*1000 / (3.6e6*m_al)
-
-
-# =========== Print Results ===========
-print(f"T out after H2 expansion = {(H2T_out - 273.15):.2f} C")
-print(f"Work turbine 1 = {W_turb1:.2f}  W")
-print(f"Work turbine 2 = {W_turb2:.2f}  W")
-print(f"Pump work      = {W_pump:.2f}  W")
-print(f"Net Rankine Work = {W_net:.2f}  W")
-print(f"H2 Turbine Work = {w_TurbH2:.2} W")
-print(f"Rankine Thermal Efficiency = {eta_th*100:.2f} %")
-
-print(f"Total (Rankine) Work per tonne Al = {work_kWh_per_tonne:.2f} kWh/tonne")
+work_kWh_per_tonne = (W_net_water + W_br + w_TurbH2) * 1000 / (3.6e6 *m_al)
+print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")
+print(f"Thermal efficiency of Steam Rankine Cycle: {eta_th_water*100:.2f} %")
+#print(f"Thermal efficiency of Organic Rankine Cycle: {eta_th_orc*100:.2f} %")
+print(f"Thermal efficiency of Total Cycle: {eta_total*100:.2f} %")
+print(f"Actual Power Output {(ACC_power_output/1e6):.2f} MW")
 
 df_states = pd.DataFrame(states_data)
 print("\n=== Thermodynamic States ===")
