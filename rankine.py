@@ -19,11 +19,8 @@ Q_boiler_total = q_boiler_per_al * m_al
 
 P_boiler   = 25e6   # Steam generation pressure
 P_bleed_1  = 10e6    # Pressure at which turbine 1 bleeds steam
-P_condenser = 0.01e6 # Expansion continues to condenser pressure
-
-
-#P_bleed_2 = 4e6           
-T_boiler_out = 773.15
+P_condenser = 0.01e6 # Expansion continues to condenser pressure         
+T_boiler_out = 773.15 # well at least we need to limit it
 eff_turbine = 0.85
 eff_pump = 0.9
 fluid = 'Water'
@@ -71,6 +68,7 @@ P5 = P_boiler
 T5 = PropsSI('T','P',P5,'H',H5, fluid)
 S5 = PropsSI('S','P',P5,'H',H5, fluid)
 Sens5 = sensible_enthalpy_PT(P5, T5)
+assert T5 < T_boiler_out, "Temperature out of boiler is too big bozzo"
 
 # --- State 8: After first turbine ---
 P6 = P_bleed_1
@@ -80,8 +78,9 @@ T6 = PropsSI('T','P',P6,'H',H6, fluid)
 S6 = PropsSI('S','P',P6,'H',H6, fluid)
 Sens6 = sensible_enthalpy_PT(P6, T6)
 
+# Bleeding fraction
 x_frac = (H3 - H2) / (H6 - H2)
-print(x_frac)
+
 
 # ---- State 9: After reheat between turbine 1 and turbine 2 -----
 H7 = H6 + Q_preheater_total / (m_dot*(1-x_frac))
@@ -301,6 +300,7 @@ ACC_power_output = W_turb1 + W_turb2 + w_TurbH2 + W_br
 work_kWh_per_tonne = (W_net_water + W_br + w_TurbH2) * 1000 / (3.6e6 *m_al)
 print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")
 print(f"Thermal efficiency of Steam Rankine Cycle: {eta_th_water*100:.2f} %")
+print(f"Bleeding fraction after first Turbine: {(x_frac*100):.2f} %")
 #print(f"Thermal efficiency of Organic Rankine Cycle: {eta_th_orc*100:.2f} %")
 print(f"Thermal efficiency of Total Cycle: {eta_total*100:.2f} %")
 print(f"Actual Power Output {(ACC_power_output/1e6):.2f} MW")
