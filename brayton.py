@@ -1,7 +1,9 @@
 import math
 from CoolProp.CoolProp import PropsSI
+from scipy.optimize import fsolve
 
-# 1) Polynomials for cp thanks to book
+# =============== Helper function ========================
+
 def cp_air_kj_per_kmolK(T):
     a = 28.11
     b = 0.1967e-2
@@ -16,136 +18,166 @@ def cp_air_j_per_kgK(T):
     cp_j_per_kgK = (cp_kj_per_kmolK * 1000.0) / M_air
     return cp_j_per_kgK
 
-def brayton_cycle_h2(
-    m_H2,               # [kg/s] mass flow of hydrogen
-    T1,                 # [K] inlet temperature to compressor
-    P1,                 # [Pa] inlet pressure to compressor (1 bar = 1e5 Pa)
-    pr,                 # [-] overall pressure ratio (compressor outlet / inlet)
-    gamma_guess,        # [-] an approximate gamma (used for the isentropic T2_ideal)
-    LHV_H2,             # [J/kg] lower heating value of hydrogen
-    m_air,              # [kg/s] mass flow of air
-    fuel_name,          # Name of fuel (choose hydrogen)
-    oxidizer_name='Air',# Name of oxidizer, defaulted to air
-    eta_comp=1.0,       # [-] isentropic efficiency of compressor (ideal=1.0)
-    eta_turb=1.0,       # [-] isentropic efficiency of turbine (ideal=1.0)
-):
-    """
-    Returns:
-      W_net    : Net shaft power [W]
-      T2       : Compressor outlet temperature [K]
-      T3       : Turbine inlet temperature (post-combustion) [K]
-      T4       : Turbine outlet temperature [K]
 
-    This version uses temperature-dependent cp (from the polynomial) to compute
-    compressor and turbine work more accurately. However, it still uses a
-    simple 'textbook' approach to isentropic temperature ratios with an
-    approximate gamma_guess. That means T2_ideal and T4_ideal come from
-    T2_ideal = T1*(pr)^((gamma_guess-1)/gamma_guess), etc.
-    Then we use the average of cp(T1) and cp(T2) to estimate W_comp, etc.
-    """
-    # ------------------------------------------------------------------------
-    # 1) Expansion of the dry Hydrogen
-    # ------------------------------------------------------------------------
-    '''P2 = pr * P1'''
+# =============== Main Body ========================
+
+def brayton_cycle_h2(
+    m_H2,               # mass flow hydrogen
+    ):
+
+    # I'll hard code the values and we will correct later
+    fuel_name = 'Hydrogen'
+    eta_turb = 0.85
+    eta_comp = 0.85
+
+    # --- State B0: Before the reheat
+    TB0 = 500 + 273.15 # K
+    PB0 = 3e7          # Pa
+    HB0 = PropsSI('H', 'P', PB0, 'T', TB0, fuel_name)
 
     # --- State B1: Hydrogen exiting reheat ---
-    TB1 = T1
-    PB1 = P1
+    TB1 = 100+273.15
+    PB1 = 3e7
     SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
-    HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
+    HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name) # This gives a 5879213.584799376 J which is pretty good, for the reheat
 
-    # --- State B2: Hydrogen after gas turbine ---
-    PB2 = PB1 / pr
+    # --- State B2: Hydrogen after expansion ---
+    PB2 = 3e6                                      # Teacher said 25-30bar with 1800K makes sense
     HB2s = PropsSI('H','P',PB2,'S',SB1,fuel_name)
     HB2 = HB1 + (HB2s - HB1) * eta_turb
     SB2 = PropsSI('S','P',PB2,'H',HB2,fuel_name)
     TB2 = PropsSI('T','P',PB2,'H',HB2,fuel_name)
 
-    '''# Ideal isentropic temperature rise (still using a constant gamma approximation):
-    T2_ideal = T1 * (pr)**((gamma_guess - 1.0) / gamma_guess)
+    # --- State B3: Air before compression ---
+    # Air is ~21% O₂, ~78% N₂ by mole fraction, STAP
+    PB3 = 1e5 
+    TB3 = 25 + 273.15
+    PB3_O2 = 0.21 * PB3 # Partials
+    PB3_N2 = 0.78 * PB3
+    HB3_O2 = PropsSI('H', 'P', PB3_O2, 'T', TB3, 'Oxygen')
+    HB3_N2 = PropsSI('H', 'P', PB3_N2, 'T', TB3, 'Nitrogen')
+    SB3_O2 = PropsSI('S', 'P', PB3_O2, 'T', TB3, 'Oxygen')
+    SB3_N2 = PropsSI('S', 'P', PB3_N2, 'T', TB3, 'Nitrogen')
+    HB3_air = 0.21 * HB3_O2 + 0.78 * HB3_N2
 
-    # Actual T2 factoring in isentropic efficiency
-    #   (T2 - T1) = (T2_ideal - T1)/eta_comp
-    T2 = T1 + (T2_ideal - T1) / eta_comp'''
+    # --- State B4: Air After compression ---
+    # No mass flow here, It's found through the lambda controller at state 5 :)
+    PB4 = PB2
+    PB4_O2 = 0.21 * PB4
+    PB4_N2 = 0.78 * PB4
+    HB4s_O2 = PropsSI('H', 'P', PB4_O2, 'S', SB3_O2, 'Oxygen')
+    HB4s_N2 = PropsSI('H', 'P', PB4_N2, 'S', SB3_N2, 'Nitrogen')
+    HB4_O2 = HB3_O2 + (HB4s_O2 - HB3_O2) / eta_comp
+    HB4_N2 = HB3_N2 + (HB4s_N2 - HB3_N2) / eta_comp
+    TB4_O2 = PropsSI('T', 'P', PB4_O2, 'H', HB4_O2, 'Oxygen')
+    TB4_N2 = PropsSI('T', 'P', PB4_N2, 'H', HB4_N2, 'Nitrogen')
+    HB4_air = 0.21 * HB4_O2 + 0.78 * HB4_N2
 
-    # Approximate the compressor work via average cp over [T1, T2]
-    '''cp_comp_in  = cp_air_j_per_kgK(T1)
-    cp_comp_out = cp_air_j_per_kgK(T2)
-    cp_comp_avg = 0.5*(cp_comp_in + cp_comp_out)
-    W_comp = m_air * cp_comp_avg * (T2 - T1)'''
 
-    # ------------------------------------------------------------------------
-    # 2) Combustor: add heat from H2, find T3
-    #    Q_dot_in = m_H2 * LHV_H2  [J/s]
-    #    (m_air + m_H2)*cp_avg*(T3 - T2) = Q_dot_in
-    #
-    # For a first approximation, we'll evaluate cp at some average temperature
-    # guess or just at T2.  A more rigorous approach would iterate or do a
-    # polynomial enthalpy solve. We'll keep it simple here.
-    # ------------------------------------------------------------------------
-    Q_dot_in = m_H2 * LHV_H2
-    m_total = m_air + m_H2
+    # --- State B5: After Combustion --- we cooking here
+    lambda_ = 1.3   # air/fuel
+    M_H2 = 0.002016  # kg/mol
+    M_O2 = 0.032
+    M_N2 = 0.0280134 * 2
+    n_H2 = m_H2 / M_H2
+    n_O2_stoich = 0.5 * n_H2
+    n_O2_supplied = lambda_ * n_O2_stoich
+    n_O2_excess = n_O2_supplied - n_O2_stoich
+    n_H2O = n_H2  # watah produced
+    n_N2 = n_O2_supplied * (78.0 / 21.0)
 
-    # cp for the mixture? For simplicity, just use air's cp at T2 or an average
-    cp_combust_in  = cp_air_j_per_kgK(T2)  # could do something more elaborate
-    # We'll guess T3 by ignoring the T-dependence in the combustor, except at T2
-    T3 = T2 + Q_dot_in/( m_total * cp_combust_in )
+    # Convert mol/s to kg/s
+    m_O2_supplied = n_O2_supplied * M_O2
+    m_N2 = n_N2 * M_N2
+    m_H2_in = n_H2 * M_H2
 
-    # ------------------------------------------------------------------------
-    # 3) Turbine expansion from (T3, P2) down to P1
-    #    Again we do an isentropic T4_ideal from the same gamma_guess,
-    #    then apply turbine efficiency, and use an average cp for the enthalpy.
-    # ------------------------------------------------------------------------
-    T4_ideal = T3 * (1/pr)**((gamma_guess - 1.0) / gamma_guess)
-    T4 = T3 - eta_turb*(T3 - T4_ideal)
+    # Enthalpy of reactants (sensible only)
+    H_reactants = (m_O2_supplied * HB4_O2) + (m_N2 * HB4_N2) + (m_H2_in * HB2)
 
-    # Approx turbine work with average cp over [T3, T4]
-    cp_turb_in  = cp_air_j_per_kgK(T3)
-    cp_turb_out = cp_air_j_per_kgK(T4)
-    cp_turb_avg = 0.5*(cp_turb_in + cp_turb_out)
-    W_turb = m_total * cp_turb_avg * (T3 - T4) + m_H2 * (HB1 - HB2)
+    # teacher gave equation with watah at liquid :(
+    # If final is vapor, 2.42 not 2.46 as given by teacher
+    DeltaH_comb_per_mol = 2.42e5 # that is j/mol
+    H_rxn = n_H2 * DeltaH_comb_per_mol
 
-    # ------------------------------------------------------------------------
-    # 4) Net work [W]
-    # ------------------------------------------------------------------------
+    def energy_balance(T_guess):
+        h_H2O = PropsSI('H', 'P', PB4, 'T', T_guess, 'Water')
+        h_O2  = PropsSI('H', 'P', PB4, 'T', T_guess, 'Oxygen')
+        h_N2  = PropsSI('H', 'P', PB4, 'T', T_guess, 'Nitrogen')
+        
+        m_H2O = n_H2O * 0.018015      # kg/s)
+        m_O2_excess = n_O2_excess * M_O2
+        m_N2_out = n_N2 * M_N2
+        
+        # Sensible enthalpy of products:
+        H_products = (m_H2O * h_H2O) + (m_O2_excess * h_O2) + (m_N2_out * h_N2)
+        
+        # Final Balance
+        return H_products - (H_reactants + H_rxn)
+
+    T_B5_guess = 1800
+    TB5 = fsolve(energy_balance, T_B5_guess)[0]
+    print(f"Temperature of the products after combustion: {TB5:.1f} K")
+    # Partial pressures again
+    n_total = n_H2O + n_O2_excess + n_N2
+    X_H2O = n_H2O / n_total
+    X_O2  = n_O2_excess / n_total
+    X_N2  = n_N2 / n_total
+
+    PB5_H20 = X_H2O * PB4
+    PB5_O2  = X_O2  * PB4
+    PB5_02  = X_N2  * PB4
+
+    # Enthalpy
+    HB5_H20 = PropsSI('H','P',PB5_H20,'T',TB5,'Water')
+    SB5_H20 = PropsSI('S','P',PB5_H20,'T',TB5,'Water')
+    HB5_O2  = PropsSI('H','P',PB5_O2,'T',TB5,'Oxygen')
+    SB5_O2  = PropsSI('S','P',PB5_O2,'T',TB5,'Oxygen')
+    HB5_N2  = PropsSI('H','P',PB5_02,'T',TB5,'Nitrogen')
+    SB5_N2  = PropsSI('S','P',PB5_02,'T',TB5,'Nitrogen')
+
+    # --- State B6: After Expansion --- 
+    PB6 = 101325 # 1atm basically
+    # Ideal isentropic expansion (still use entropy)
+    HB6s_H2O = PropsSI('H', 'P', PB6, 'S', SB5_H20, 'Water')
+    HB6s_O2  = PropsSI('H', 'P', PB6, 'S', SB5_O2,  'Oxygen')
+    HB6s_N2  = PropsSI('H', 'P', PB6, 'S', SB5_N2,  'Nitrogen')
+
+    # Real expansion with efficiency
+    HB6_H2O = HB5_H20 + eta_turb * (HB6s_H2O - HB5_H20)
+    HB6_O2  = HB5_O2  + eta_turb * (HB6s_O2  - HB5_O2)
+    HB6_N2  = HB5_N2  + eta_turb * (HB6s_N2  - HB5_N2)
+
+    # And then idk mother nature will manage the rest
+
+
+    # --- Work! Work! Work! ---
+    m_H2O = n_H2O * 0.018015      # kg/s)
+    m_O2_excess = n_O2_excess * M_O2
+    m_N2_out = n_N2 * M_N2
+    m_air = m_O2_supplied + m_N2
+
+    #print(f"HB4_air {HB4_air}")
+    #print(f"HB3_air {HB3_air}")
+
+    W_comp = m_air * (HB4_air - HB3_air)
+    #print(f"Compression work: {W_comp:.2f}")
+    W_turb = m_H2O*(HB5_H20 - HB6_H2O) + m_O2_excess*(HB5_O2 - HB6_O2) + m_N2_out*(HB5_N2-HB6_N2)
+    #print(f"Turbine work out: {W_turb:.2f}")
+
     W_net = W_turb - W_comp
 
-    return W_net, T2, T3, T4
+    return W_net
 
+
+
+ # Testing Unit
 if __name__ == "__main__":
-    # ------------------------------
-    # Example usage
-    # ------------------------------
 
-    # Mass flow of H2 [kg/s]
-    #m_H2 = 0.05  # 0.05 kg/s of hydrogen
-    m_H2 = 0.1117 * 8.75
-
-    # Inlet conditions
-    T_in_C = 200.58          # degC
-    T1 = T_in_C + 273.15     # K
-    P1_bar = 1.0
-    P1 = P1_bar * 1e5        # Pa
-
-    # Assumed Brayton cycle parameters
-    pr          = 10.0        # Overall pressure ratio
-    gamma_guess = 1.4         # Just an approximate gamma for the isentropic formula
-    LHV_H2      = 120e6       # J/kg (120 MJ/kg for H2)
-    m_air       = 60         # [kg/s] air flow
-    eta_comp    = 0.88        # compressor isentropic efficiency
-    eta_turb    = 0.90        # turbine isentropic efficiency
+    m_H2 = 1.0087472201630838
 
     # Run the Brayton cycle function
-    W_net, T2, T3, T4 = brayton_cycle_h2(
-        m_H2, T1, P1, pr,
-        gamma_guess,
-        LHV_H2, m_air,
-        eta_comp=eta_comp,
-        eta_turb=eta_turb
+    Dog = brayton_cycle_h2(
+        m_H2
     )
 
-    # Print results
-    print(f"Compressor outlet temperature T2 = {T2:.2f} K")
-    print(f"Turbine inlet temperature    T3 = {T3:.2f} K")
-    print(f"Turbine outlet temperature   T4 = {T4:.2f} K")
-    print(f"Net shaft power (approx)     W_net = {(W_net / 1e6 ):.2f} MW")
+    print(Dog)

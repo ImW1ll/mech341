@@ -202,13 +202,8 @@ gamma_air = 1.4
 eta_comp = 0.88        # compressor isentropic efficiency
 eta_turb = 0.90        # turbine isentropic efficiency
 
-# -- Get the net Brayton output power [W] for the hydrogen cycle --
-W_br, T2_br, T3_br, T4_br = brayton_cycle_h2(m_H2, T_in, P_in,
-                                            pr,
-                                            gamma_air, 
-                                            LHV_H2, m_air, 'Hydrogen',
-                                            eta_comp=eta_comp,
-                                            eta_turb=eta_turb)
+# Yeah I know I made it simpler
+W_br = brayton_cycle_h2(m_H2)
 
 # --- Supplementary Work ---
 
@@ -216,7 +211,7 @@ TB1 = T_boiler_out
 PB1 = 30e6
 SB1 = PropsSI('S','T',TB1,'P',PB1,gas)
 HB1 = PropsSI('H','T',TB1,'P',PB1,gas)
-
+""" I've commented this out because I wanna push asap and don't me have time to fix
 PB2 = 3e6 # As instructed by the professor
 TB2 = T2_br
 HB2 = PropsSI('H','T',TB2,'P',PB2,gas)
@@ -231,6 +226,31 @@ PB4 = P_in
 TB4 = T4_br
 HB4 = PropsSI('H','T',TB4,'P',PB4,gas)
 SB4 = PropsSI('S','T',TB4,'P',PB4,gas)
+
+these states are also in jail
+{
+        'State': 'B2',
+        'P (MPa)': round(PB2/1e6,2),
+        'T (C)': round(T2_br - 273.19,2),
+        'H (kJ/kg)': round(HB2/1e3,2),
+        'S (kJ/kg.K)': round(SB2/1e3,2),
+    },
+    {
+        'State': 'B3',
+        'P (MPa)': round(PB3/1e6,2),
+        'T (C)': round(T3_br - 273.19,2),
+        'H (kJ/kg)': round(HB3/1e3,2),
+        'S (kJ/kg.K)': round(SB3/1e3,2),
+    },
+    {
+        'State': 'B4',
+        'P (MPa)': round(PB4/1e6/1e6,2),
+        'T (C)': round(T4_br - 273.19,2),
+        'H (kJ/kg)': round(HB4/1e3,2),
+        'S (kJ/kg.K)': round(SB4/1e3,2) 
+    },
+
+"""
 
 # ================= Output results =======================
 
@@ -310,27 +330,7 @@ states_data = [
         'S (kJ/kg.K)': round(S8/1e3, 2),
         'Sens. H': Sens8 / 1000,
     },
-    {
-        'State': 'B2',
-        'P (MPa)': round(PB2/1e6,2),
-        'T (C)': round(T2_br - 273.19,2),
-        'H (kJ/kg)': round(HB2/1e3,2),
-        'S (kJ/kg.K)': round(SB2/1e3,2),
-    },
-    {
-        'State': 'B3',
-        'P (MPa)': round(PB3/1e6,2),
-        'T (C)': round(T3_br - 273.19,2),
-        'H (kJ/kg)': round(HB3/1e3,2),
-        'S (kJ/kg.K)': round(SB3/1e3,2),
-    },
-    {
-        'State': 'B4',
-        'P (MPa)': round(PB4/1e6/1e6,2),
-        'T (C)': round(T4_br - 273.19,2),
-        'H (kJ/kg)': round(HB4/1e3,2),
-        'S (kJ/kg.K)': round(SB4/1e3,2) 
-    },
+    
 ]
 
 
