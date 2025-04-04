@@ -203,7 +203,8 @@ eta_comp = 0.88        # compressor isentropic efficiency
 eta_turb = 0.90        # turbine isentropic efficiency
 
 # Yeah I know I made it simpler
-W_br = brayton_cycle_h2(m_H2)
+brayton_states_and_work = brayton_cycle_h2(m_H2,T_boiler_out,3e7,1.3)
+W_br = brayton_states_and_work['Work']
 
 # --- Supplementary Work ---
 
@@ -332,7 +333,6 @@ states_data = [
     },
     
 ]
-
 
 print(f"New brayton shaft power {W_br:.2f}")
 ACC_power_output = W_turb1 + W_turb2 + w_TurbH2 + W_br
