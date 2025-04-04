@@ -6,14 +6,9 @@ The TA basically did the same thing that I did, but went way overboard to make i
 """
 # Okay so now we fix this shit
 import math as mt
-
-
-
 import numpy as np
 
-import numpy as np
-
-def enthalpy_alumina_highT(T):
+def enthalpy_alumina_highT(T, P_actual=None):
     """
     WE'RE FUCKING USING A NASA EQUATION
     """
@@ -40,11 +35,18 @@ def enthalpy_alumina_highT(T):
         + (a7 * T**5) / 5
         + b1
     )
+    if P_actual is not None:
+        # Add pressure correction given by teacher :)
+        specific_volume = 2.5575e-5  # from elgoogle
+        P_ref = 101325  # Pa
+        deltaH_pressure = specific_volume * (P_actual - P_ref)  # J/mol
+        h += deltaH_pressure
+
     return h  # [J/mol] !
 
-import numpy as np
 
-def enthalpy_alumina_lowT(T):
+
+def enthalpy_alumina_lowT(T, P_actual=None):
     hf0 = -1675700
     a1 = -604209
     a2 = 0
@@ -67,7 +69,58 @@ def enthalpy_alumina_lowT(T):
         + (a7 * T**5) / 5
         + b1
     )
+
+    if P_actual is not None:
+        # Add pressure correction given by teacher :)
+        specific_volume = 2.5575e-5  # from elgoogle
+        P_ref = 101325  # Pa
+        deltaH_pressure = specific_volume * (P_actual - P_ref)  # J/mol
+        h += deltaH_pressure
+
     return h  # [J/mol]
+
+def enthalpy_aluminum(T, P_actual=None):
+    hf0 = 0
+    a1 = -62518.1
+    a2 = 634.3934
+    a3 = -0.71319
+    a4 = 0.010887
+    a5 = -1.5E-05
+    a6 = 9.96E-09
+    a7 = -1.8E-12 
+    b1 = -3985.44
+
+    # Calculate enthalpy at temperature T
+    h = (
+        hf0
+        - a1 / T
+        + a2 * np.log(T)
+        + a3 * T
+        + (a4 * T**2) / 2
+        + (a5 * T**3) / 3
+        + (a6 * T**4) / 4
+        + (a7 * T**5) / 5
+        + b1
+    )
+
+    if P_actual is not None:
+        # Add pressure correction given by teacher :)
+        specific_volume = 2.5575e-5  # from elgoogle
+        P_ref = 101325  # Pa
+        deltaH_pressure = specific_volume * (P_actual - P_ref)  # J/mol
+        h += deltaH_pressure
+
+    return h  # [J/mol]
+
+# =================== Enthalpy of reactants
+# Water
+
+
+
+# ALUMINUMMMMMMMM
+P_reactor = 300e5 # PA
+
+
 
 
 
@@ -90,3 +143,4 @@ energy_per_kg_Al_MJ = energy_per_kg_Al_kJ / 1000 #15.16
 hAlumina_low = enthalpy_alumina_lowT(25+273.15)
 hALumina_high = enthalpy_alumina_highT(500+273.15)
 delHAlumina = hALumina_high - hAlumina_low
+print(delHAlumina)
