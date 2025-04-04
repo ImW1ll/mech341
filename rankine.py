@@ -11,12 +11,11 @@ m_dot = 65  # kg/s
 m_al = 9  # kg/s
 q_preheater_per_al = 1e6  # J/kg
 q_reheat_per_al = 0
-q_boiler_per_al = 12.5e6 - q_reheat_per_al
+q_boiler_per_al = 12.5e6 - q_reheat_per_al # Requires revision for exactitude
 Q_preheater_total = q_preheater_per_al * m_al
 q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
-
 P_boiler   = 25e6   # Steam generation pressure
 P_bleed_1  = 10e6    # Pressure at which turbine 1 bleeds steam
 P_condenser = 0.01e6 # Expansion continues to condenser pressure         
@@ -61,7 +60,7 @@ S4 = PropsSI('S','P',P4,'H',H4,fluid)
 T4 = PropsSI('T','P',P4,'H',H4,fluid)
 Sens4 = sensible_enthalpy_PT(P4, T4)
 
-# --- State 7: After boiler (to turbine inlet) ---
+# --- State 5: After boiler (to turbine inlet) ---
 # Add Q_boiler/m_dot to H3
 H5 = H4 + Q_boiler_total / m_dot
 P5 = P_boiler
@@ -70,7 +69,7 @@ S5 = PropsSI('S','P',P5,'H',H5, fluid)
 Sens5 = sensible_enthalpy_PT(P5, T5)
 assert T5 < T_boiler_out, "Temperature out of boiler is too big bozzo"
 
-# --- State 8: After first turbine ---
+# --- State 6: After first turbine ---
 P6 = P_bleed_1
 H6s = PropsSI('H','S',S5,'P',P6, fluid)
 H6 = H5 + (H6s - H5) * eff_turbine
@@ -81,8 +80,7 @@ Sens6 = sensible_enthalpy_PT(P6, T6)
 # Bleeding fraction
 x_frac = (H3 - H2) / (H6 - H2)
 
-
-# ---- State 9: After reheat between turbine 1 and turbine 2 -----
+# ---- State 7: After reheat between turbine 1 and turbine 2 -----
 H7 = H6 + Q_preheater_total / (m_dot*(1-x_frac))
 P7 = P_bleed_1
 S7 = PropsSI('S','P',P7,'H',H7,fluid)
@@ -108,7 +106,7 @@ Sens10II = sensible_enthalpy_PT(P10II, T10II)
 
 """
 
-# --- State 10: After second turbine, before condenser ---
+# --- State 8: After second turbine, before condenser ---
 P8 = P_condenser
 H8s = PropsSI('H','S',S7,'P',P8, fluid)
 # Notice the sign in the standard isentropic step is H1s - H6, but you added (H6 - H1s)/eff_turbine 
@@ -122,8 +120,6 @@ Sens8 = sensible_enthalpy_PT(P8, T8)
 #--------------------------%--------------------------
 
 m_frac = 1 - x_frac
-assert (m_frac + x_frac) == 1, "Issue with Mass Fraction: maybe check enthalpy compatibility?" # this will never trigger as you anyway say 1 = m_frac + x_frac on the line above
-
 
 # ============= Work math ================
 # Work output
@@ -134,7 +130,6 @@ W_pump_1 = (H2 - H1) * (1-x_frac) * m_dot
 W_pump_2 = (H4 - H3) * m_dot
 
 W_net_water = W_turb1 + W_turb2 - W_pump_1  - W_pump_2
-
 
 # ============ Heat math ===============
 # Heat input (should match given totals)
@@ -160,7 +155,14 @@ T_al_water = PropsSI('T','H',H_al_water,'P',P_river,fluid)
 #--------------------------%--------------------------
 #              Hydrogen Related Work
 #--------------------------%--------------------------
-# Out of the reactor the H2 is at 300bar and 500C
+
+# --- SATP Conditions ---
+
+gas = 'Hydrogen'
+P_SATP = 0.1013e6 # Pa
+T_SATP = 298.19 # K
+
+# --- Out of the reactor the H2 is at 300bar and 500C ---
 M_Al = 26.98
 M_H2 = 2.016
 LHV_H2 = 120e6   # J/kg
@@ -174,31 +176,31 @@ TH2 = 500 + 273.15 # K
 eff_h2 = 0.85
 PH2_out = 100000 # 1 bar, yeah I'm that optimistic
 
-HH2 = PropsSI('H', 'P', PH2, 'T', TH2, 'Hydrogen')
-SH2 = PropsSI('S', 'P', PH2, 'T', TH2, 'Hydrogen')
+HH2 = PropsSI('H', 'P', PH2, 'T', TH2, gas)
+SH2 = PropsSI('S', 'P', PH2, 'T', TH2, gas)
 
 
-h_s_out = PropsSI('H','P',PH2_out,'S', SH2, 'Hydrogen')
+h_s_out = PropsSI('H','P',PH2_out,'S', SH2, gas)
 h_out   = HH2 - eff_fc*(HH2 - h_s_out)
 
-H2T_out = PropsSI('T', 'H', h_out, 'P', PH2_out, 'Hydrogen')
+H2T_out = PropsSI('T', 'H', h_out, 'P', PH2_out, gas)
 
 w_TurbH2 = (HH2 - h_out) * m_H2
 
 # -- Brayton-cycle parameters (replace with real design if needed) --
-T_in_C = 200.58         # Inlet H2 temperature (°C) - or use your known T_in
-T_in   = T_in_C + 273.15 # K
+T_in_C = 200.58        # Inlet H2 temperature (°C) - or use your known T_in
+T_in = T_in_C + 273.15 # K
 P_in_bar = 1.0
-P_in = P_in_bar*1e5     # 1 bar -> Pa
+P_in = P_in_bar*1e5    # 1 bar -> Pa
 
 # For the simplest case, assume you have enough air to keep T3 within reason:
 m_air = 150            # [kg/s], adjust to control turbine inlet temp
-pr = 10.0               # overall pressure ratio
-cp_air = 1005.0         # J/(kg*K)
+pr = 10.0              # overall pressure ratio
+cp_air = 1005.0        # J/(kg*K) Idealized at the moment, check error of idealization
 gamma_air = 1.4
 
-eta_comp = 0.88         # compressor isentropic efficiency
-eta_turb = 0.90         # turbine isentropic efficiency
+eta_comp = 0.88        # compressor isentropic efficiency
+eta_turb = 0.90        # turbine isentropic efficiency
 
 # -- Get the net Brayton output power [W] for the hydrogen cycle --
 W_br, T2_br, T3_br, T4_br = brayton_cycle_h2(m_H2, T_in, P_in,
@@ -208,6 +210,27 @@ W_br, T2_br, T3_br, T4_br = brayton_cycle_h2(m_H2, T_in, P_in,
                                             eta_comp=eta_comp,
                                             eta_turb=eta_turb)
 
+# --- Supplementary Work ---
+
+TB1 = T_boiler_out
+PB1 = 30e6
+SB1 = PropsSI('S','T',TB1,'P',PB1,gas)
+HB1 = PropsSI('H','T',TB1,'P',PB1,gas)
+
+PB2 = 3e6 # As instructed by the professor
+TB2 = T2_br
+HB2 = PropsSI('H','T',TB2,'P',PB2,gas)
+SB2 = PropsSI('S','T',TB2,'P',PB2,gas)
+
+PB3 = PB2
+TB3 = T3_br
+HB3 = PropsSI('H','T',TB3,'P',PB3,gas)
+SB3 = PropsSI('S','T',TB3,'P',PB3,gas)
+
+PB4 = P_in
+TB4 = T4_br
+HB4 = PropsSI('H','T',TB4,'P',PB4,gas)
+SB4 = PropsSI('S','T',TB4,'P',PB4,gas)
 
 # ================= Output results =======================
 
@@ -281,16 +304,25 @@ states_data = [
     },
     {
         'State': 'B2',
-        'T (C)': T2_br,
+        'P (MPa)': round(PB2,2),
+        'T (C)': round(T2_br,2),
+        'H (kJ/kg)': round(HB2,2),
+        'S (kJ/kg.K)': round(SB2,2),
     },
     {
         'State': 'B3',
-        'T (C)': T3_br,
+        'P (MPa)': round(PB3,2),
+        'T (C)': round(T3_br,2),
+        'H (kJ/kg)': round(HB3,2),
+        'S (kJ/kg.K)': round(SB3,2),
     },
     {
         'State': 'B4',
-        'T (C)': T4_br,
-    }
+        'P (MPa)': round(PB4,2),
+        'T (C)': round(T4_br,2),
+        'H (kJ/kg)': round(HB4,2),
+        'S (kJ/kg.K)': round(SB4,2) 
+    },
 ]
 
 
@@ -301,7 +333,6 @@ work_kWh_per_tonne = (W_net_water + W_br + w_TurbH2) * 1000 / (3.6e6 *m_al)
 print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")
 print(f"Thermal efficiency of Steam Rankine Cycle: {eta_th_water*100:.2f} %")
 print(f"Bleeding fraction after first Turbine: {(x_frac*100):.2f} %")
-#print(f"Thermal efficiency of Organic Rankine Cycle: {eta_th_orc*100:.2f} %")
 print(f"Thermal efficiency of Total Cycle: {eta_total*100:.2f} %")
 print(f"Actual Power Output {(ACC_power_output/1e6):.2f} MW")
 
