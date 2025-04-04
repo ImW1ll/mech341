@@ -16,18 +16,18 @@ def cp_air_j_per_kgK(T):
     cp_j_per_kgK = (cp_kj_per_kmolK * 1000.0) / M_air
     return cp_j_per_kgK
 
-
-
 def brayton_cycle_h2(
-    m_H2,            # [kg/s] mass flow of hydrogen
-    T1,              # [K] inlet temperature to compressor
-    P1,              # [Pa] inlet pressure to compressor (1 bar = 1e5 Pa)
-    pr,              # [-] overall pressure ratio (compressor outlet / inlet)
-    gamma_guess,     # [-] an approximate gamma (used for the isentropic T2_ideal)
-    LHV_H2,          # [J/kg] lower heating value of hydrogen
-    m_air,           # [kg/s] mass flow of air
-    eta_comp=1.0,    # [-] isentropic efficiency of compressor (ideal=1.0)
-    eta_turb=1.0     # [-] isentropic efficiency of turbine (ideal=1.0)
+    m_H2,               # [kg/s] mass flow of hydrogen
+    T1,                 # [K] inlet temperature to compressor
+    P1,                 # [Pa] inlet pressure to compressor (1 bar = 1e5 Pa)
+    pr,                 # [-] overall pressure ratio (compressor outlet / inlet)
+    gamma_guess,        # [-] an approximate gamma (used for the isentropic T2_ideal)
+    LHV_H2,             # [J/kg] lower heating value of hydrogen
+    m_air,              # [kg/s] mass flow of air
+    fuel_name,          # Name of fuel (choose hydrogen)
+    oxidizer_name='Air',# Name of oxidizer, defaulted to air
+    eta_comp=1.0,       # [-] isentropic efficiency of compressor (ideal=1.0)
+    eta_turb=1.0,       # [-] isentropic efficiency of turbine (ideal=1.0)
 ):
     """
     Returns:
@@ -44,22 +44,35 @@ def brayton_cycle_h2(
     Then we use the average of cp(T1) and cp(T2) to estimate W_comp, etc.
     """
     # ------------------------------------------------------------------------
-    # 1) Compressor: isentropic temperature T2_ideal from T1, then actual T2
+    # 1) Expansion of the dry Hydrogen
     # ------------------------------------------------------------------------
-    P2 = pr * P1
+    '''P2 = pr * P1'''
 
-    # Ideal isentropic temperature rise (still using a constant gamma approximation):
+    # --- State B1: Hydrogen exiting reheat ---
+    TB1 = T1
+    PB1 = P1
+    SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
+    HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
+
+    # --- State B2: Hydrogen after gas turbine ---
+    PB2 = PB1 / pr
+    HB2s = PropsSI('H','P',PB2,'S',SB1,fuel_name)
+    HB2 = HB1 + (HB2s - HB1) * eta_turb
+    SB2 = PropsSI('S','P',PB2,'H',HB2,fuel_name)
+    TB2 = PropsSI('T','P',PB2,'H',HB2,fuel_name)
+
+    '''# Ideal isentropic temperature rise (still using a constant gamma approximation):
     T2_ideal = T1 * (pr)**((gamma_guess - 1.0) / gamma_guess)
 
     # Actual T2 factoring in isentropic efficiency
     #   (T2 - T1) = (T2_ideal - T1)/eta_comp
-    T2 = T1 + (T2_ideal - T1)/eta_comp
+    T2 = T1 + (T2_ideal - T1) / eta_comp'''
 
     # Approximate the compressor work via average cp over [T1, T2]
-    cp_comp_in  = cp_air_j_per_kgK(T1)
+    '''cp_comp_in  = cp_air_j_per_kgK(T1)
     cp_comp_out = cp_air_j_per_kgK(T2)
     cp_comp_avg = 0.5*(cp_comp_in + cp_comp_out)
-    W_comp = m_air * cp_comp_avg * (T2 - T1)
+    W_comp = m_air * cp_comp_avg * (T2 - T1)'''
 
     # ------------------------------------------------------------------------
     # 2) Combustor: add heat from H2, find T3
@@ -83,15 +96,14 @@ def brayton_cycle_h2(
     #    Again we do an isentropic T4_ideal from the same gamma_guess,
     #    then apply turbine efficiency, and use an average cp for the enthalpy.
     # ------------------------------------------------------------------------
-    expansion_ratio = P1 / P2
-    T4_ideal = T3 * (expansion_ratio)**((gamma_guess - 1.0) / gamma_guess)
+    T4_ideal = T3 * (1/pr)**((gamma_guess - 1.0) / gamma_guess)
     T4 = T3 - eta_turb*(T3 - T4_ideal)
 
     # Approx turbine work with average cp over [T3, T4]
     cp_turb_in  = cp_air_j_per_kgK(T3)
     cp_turb_out = cp_air_j_per_kgK(T4)
     cp_turb_avg = 0.5*(cp_turb_in + cp_turb_out)
-    W_turb = m_total * cp_turb_avg * (T3 - T4)
+    W_turb = m_total * cp_turb_avg * (T3 - T4) + m_H2 * (HB1 - HB2)
 
     # ------------------------------------------------------------------------
     # 4) Net work [W]

@@ -17,6 +17,7 @@ q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
 P_boiler   = 25e6   # Steam generation pressure
+P_stage_1_out = 8e6
 P_bleed_1  = 10e6    # Pressure at which turbine 1 bleeds steam
 P_condenser = 0.01e6 # Expansion continues to condenser pressure         
 T_boiler_out = 773.15 # well at least we need to limit it
@@ -70,32 +71,32 @@ Sens5 = sensible_enthalpy_PT(P5, T5)
 assert T5 < T_boiler_out, "Temperature out of boiler is too big bozzo"
 
 # --- State 6: After first turbine ---
-P6 = P_bleed_1
+P6 = P_stage_1_out
 H6s = PropsSI('H','S',S5,'P',P6, fluid)
 H6 = H5 + (H6s - H5) * eff_turbine
 T6 = PropsSI('T','P',P6,'H',H6, fluid)
 S6 = PropsSI('S','P',P6,'H',H6, fluid)
 Sens6 = sensible_enthalpy_PT(P6, T6)
 
+# --- State 6I: First Bled Water ---
+P6I = P_bleed_1
+H6Is = PropsSI('H','P',P6I,'S',S5,fluid)
+H6I = H5 - (H5 - H6Is) * eff_turbine
+S6I = PropsSI('S','P',P6I,'H',H6I,fluid)
+T6I = PropsSI('T','P',P6I,'H',H6I,fluid)
+Sens6I = sensible_enthalpy_PT(P6I, T6I)
+
 # Bleeding fraction
-x_frac = (H3 - H2) / (H6 - H2)
+x_frac = (H3 - H2) / (H6I - H2)
 
 # ---- State 7: After reheat between turbine 1 and turbine 2 -----
-H7 = H6 + Q_preheater_total / (m_dot*(1-x_frac))
+H7 = H6 + Q_preheater_total / (m_dot * (1 - x_frac))
 P7 = P_bleed_1
 S7 = PropsSI('S','P',P7,'H',H7,fluid)
 T7 = PropsSI('T','P',P7,'H',H7,fluid)
 Sens7 = sensible_enthalpy_PT(P7, T7)
 
 """
-# --- State 10I: First Bled Water ---
-P10I = P_bleed_1
-H10Is = PropsSI('H','P',P10I,'S',S9,fluid)
-H10I = H9 - (H9 - H10Is) * eff_turbine
-S10I = PropsSI('S','P',P10I,'H',H10I,fluid)
-T10I = PropsSI('T','P',P10I,'H',H10I,fluid)
-Sens10I = sensible_enthalpy_PT(P10I, T10I)
-
 # --- State 10II: Second Bled Water ---
 P10II = P_bleed_2
 H10IIs = PropsSI('H','P',P10II,'S',S10I,fluid)
@@ -123,10 +124,9 @@ m_frac = 1 - x_frac
 
 # ============= Work math ================
 # Work output
-W_turb1 = (H5 - H6) * m_dot
-W_turb2 = m_dot * (H7 - H8)*(1-x_frac)
-
-W_pump_1 = (H2 - H1) * (1-x_frac) * m_dot
+W_turb1 = m_dot * ((H5 - H6I) + m_frac * (H6I - H6))
+W_turb2 = m_dot * m_frac * (H7 - H8)
+W_pump_1 = (H2 - H1) * m_frac * m_dot
 W_pump_2 = (H4 - H3) * m_dot
 
 W_net_water = W_turb1 + W_turb2 - W_pump_1  - W_pump_2
@@ -206,7 +206,7 @@ eta_turb = 0.90        # turbine isentropic efficiency
 W_br, T2_br, T3_br, T4_br = brayton_cycle_h2(m_H2, T_in, P_in,
                                             pr,
                                             gamma_air, 
-                                            LHV_H2, m_air,
+                                            LHV_H2, m_air, 'Hydrogen',
                                             eta_comp=eta_comp,
                                             eta_turb=eta_turb)
 
@@ -287,6 +287,14 @@ states_data = [
         'Sens. H': Sens6 / 1000,
     },
     {
+        'State': '6I',
+        'P (MPa)': round(P6I/1e6, 2),
+        'T (C)': round(T6I - 273.15, 2),
+        'H (kJ/kg)': round(H6I/1e3, 2),
+        'S (kJ/kg.K)': round(S6I/1e3, 2),
+        'Sens. H': Sens3 / 1000,
+    },
+    {
         'State': '7',
         'P (MPa)': round(P7/1e6, 2),
         'T (C)': round(T7 - 273.15, 2),
@@ -304,24 +312,24 @@ states_data = [
     },
     {
         'State': 'B2',
-        'P (MPa)': round(PB2,2),
-        'T (C)': round(T2_br,2),
-        'H (kJ/kg)': round(HB2,2),
-        'S (kJ/kg.K)': round(SB2,2),
+        'P (MPa)': round(PB2/1e6,2),
+        'T (C)': round(T2_br - 273.19,2),
+        'H (kJ/kg)': round(HB2/1e3,2),
+        'S (kJ/kg.K)': round(SB2/1e3,2),
     },
     {
         'State': 'B3',
-        'P (MPa)': round(PB3,2),
-        'T (C)': round(T3_br,2),
-        'H (kJ/kg)': round(HB3,2),
-        'S (kJ/kg.K)': round(SB3,2),
+        'P (MPa)': round(PB3/1e6,2),
+        'T (C)': round(T3_br - 273.19,2),
+        'H (kJ/kg)': round(HB3/1e3,2),
+        'S (kJ/kg.K)': round(SB3/1e3,2),
     },
     {
         'State': 'B4',
-        'P (MPa)': round(PB4,2),
-        'T (C)': round(T4_br,2),
-        'H (kJ/kg)': round(HB4,2),
-        'S (kJ/kg.K)': round(SB4,2) 
+        'P (MPa)': round(PB4/1e6/1e6,2),
+        'T (C)': round(T4_br - 273.19,2),
+        'H (kJ/kg)': round(HB4/1e3,2),
+        'S (kJ/kg.K)': round(SB4/1e3,2) 
     },
 ]
 
