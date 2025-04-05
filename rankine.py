@@ -174,7 +174,7 @@ m_H2 = m_al * kg_H2_per_kg_Al       # mass flow of H2 (kg/s)
 PH2 = 3e7
 TH2 = 500 + 273.15 # K
 eff_h2 = 0.85
-PH2_out = 100000 # 1 bar, yeah I'm that optimistic
+PH2_out = 300000 # 1 bar, yeah I'm that optimistic
 
 HH2 = PropsSI('H', 'P', PH2, 'T', TH2, gas)
 SH2 = PropsSI('S', 'P', PH2, 'T', TH2, gas)
@@ -203,7 +203,7 @@ eta_comp = 0.88        # compressor isentropic efficiency
 eta_turb = 0.90        # turbine isentropic efficiency
 
 # Yeah I know I made it simpler
-brayton_states_and_work = brayton_cycle_h2(m_H2,T_boiler_out,3e7,1.3)
+brayton_states_and_work = brayton_cycle_h2(m_H2,T_boiler_out,PH2,2)
 W_br = brayton_states_and_work['Work']
 
 # --- Supplementary Work ---
@@ -335,7 +335,7 @@ states_data = [
 ]
 
 print(f"New brayton shaft power {W_br:.2f}")
-ACC_power_output = W_turb1 + W_turb2 + w_TurbH2 + W_br
+ACC_power_output = W_turb1 + W_turb2 + W_br
 
 work_kWh_per_tonne = (W_net_water + W_br + w_TurbH2) * 1000 / (3.6e6 *m_al)
 print(f"Work per tonne of Al: {work_kWh_per_tonne:.2f} kWh/tonne")

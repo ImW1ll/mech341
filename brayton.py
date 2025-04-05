@@ -59,10 +59,10 @@ def brayton_cycle_h2(
     m_H2,               # mass flow hydrogen
     TB0,                # Temperature of Hydrogen before heat exchange (K)
     PB0,                # Pressure of hydrogen before heat exchange (Pa)
-    lam,                # Air-to-fuel ratio for mixing
+    lmdba=2.1,                # Air-to-fuel ratio for mixing
     fuel_name = 'Hydrogen',
-    eta_turb = 0.85,
-    eta_comp = 0.85,
+    eta_turb = 0.88,
+    eta_comp = 0.88,
     ):
 
     # --- Molar Masses --- 
@@ -76,10 +76,12 @@ def brayton_cycle_h2(
     HB0 = PropsSI('H', 'P', PB0, 'T', TB0, fuel_name)
 
     # --- State B1: Hydrogen exiting reheat ---
-    TB1 = 100+273.15
-    PB1 = 3e7
+    TB1 = 340+273.15
+    PB1 = PB0
     SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
-    HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name) # This gives a 5879213.584799376 J which is pretty good, for the reheat
+    HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
+    # reheat = m_H2*(HB0 - HB1) 2370615.719104707, so way down on this one
+
 
     # --- State B2: Hydrogen after expansion ---
     PB2 = 3e6                                      # Teacher said 25-30bar with 1800K makes sense
@@ -102,7 +104,7 @@ def brayton_cycle_h2(
     SB3 = 0.232 * SB3_O2 + 0.768 * SB3_N2
 
     # --- State B4: Air After compression ---
-    # No mass flow here, It's found through the lambda controller at state 5 :)
+    # No mass flow here, It's found through the lmdba controller at state 5 :)
     PB4 = PB2
     PB4_O2 = 0.21 * PB4
     PB4_N2 = 0.79 * PB4
@@ -117,13 +119,12 @@ def brayton_cycle_h2(
     TB4 = HB4 / cp_air_j_per_kgK(799.5) # Guessed and checked
 
     # --- State B5: After Combustion --- we cooking here
-    lambda_ = lam   # air/fuel, set at 1.3
     n_H2 = m_H2 / M_H2
     n_O2_stoich = 0.5 * n_H2
-    n_O2_supplied = lambda_ * n_O2_stoich
+    n_O2_supplied = lmdba * n_O2_stoich
     n_O2_excess = n_O2_supplied - n_O2_stoich
     n_H2O = n_H2  # watah produced
-    n_N2 = n_O2_supplied * (79.0 / 21.0)
+    n_N2 = n_O2_supplied * (79.0 / 21.0) # 3.76
 
     # Convert mol/s to kg/s
     m_O2_supplied = n_O2_supplied * M_O2
@@ -143,10 +144,16 @@ def brayton_cycle_h2(
     X_O2  = n_O2_excess / n_total
     X_N2  = n_N2 / n_total
 
+     # Partial pressures again
+    PB5 = PB4
+    PB5_H2O = X_H2O * PB5
+    PB5_O2  = X_O2  * PB5
+    PB5_N2  = X_N2  * PB5
+
     def energy_balance(T_guess):
-        h_H2O = PropsSI('H', 'P', PB4 * X_H2O, 'T', T_guess, 'Water')
-        h_O2  = PropsSI('H', 'P', PB4 * X_O2, 'T', T_guess, 'Oxygen')
-        h_N2  = PropsSI('H', 'P', PB4 * X_N2, 'T', T_guess, 'Nitrogen')
+        h_H2O = PropsSI('H', 'P', PB5_H2O, 'T', T_guess, 'Water')
+        h_O2  = PropsSI('H', 'P', PB5_O2, 'T', T_guess, 'Oxygen')
+        h_N2  = PropsSI('H', 'P', PB5_N2, 'T', T_guess, 'Nitrogen')
         
         m_H2O = n_H2O * 0.018015      # kg/s
         m_O2_excess = n_O2_excess * M_O2
@@ -162,20 +169,16 @@ def brayton_cycle_h2(
     TB5 = fsolve(energy_balance, T_B5_guess)[0]
     print(f"Temperature of the products after combustion: {TB5:.1f} K")
     
-    # Partial pressures again
-    PB5 = PB4
-    PB5_H2O = X_H2O * PB5
-    PB5_O2  = X_O2  * PB5
-    PB5_O2  = X_N2  * PB5
-    
+   
+
     # Enthalpy
     HB5_H2O = PropsSI('H','P',PB5_H2O,'T',TB5,'Water')
     HB5_O2  = PropsSI('H','P',PB5_O2,'T',TB5,'Oxygen')
-    HB5_N2  = PropsSI('H','P',PB5_O2,'T',TB5,'Nitrogen') 
+    HB5_N2  = PropsSI('H','P',PB5_N2,'T',TB5,'Nitrogen') 
     HB5 = (HB5_H2O * X_H2O * M_H2O + HB5_N2 * X_N2 * M_N2 + HB5_O2 * X_O2 * M_O2) / (X_H2O * M_H2O + X_N2 * M_N2 + X_O2 * M_O2)   
     SB5_H2O = PropsSI('S','P',PB5_H2O,'T',TB5,'Water')
     SB5_O2  = PropsSI('S','P',PB5_O2,'T',TB5,'Oxygen')
-    SB5_N2  = PropsSI('S','P',PB5_O2,'T',TB5,'Nitrogen')
+    SB5_N2  = PropsSI('S','P',PB5_N2,'T',TB5,'Nitrogen')
     SB5 = (SB5_H2O * X_H2O * M_H2O + SB5_N2 * X_N2 * M_N2 + SB5_O2 * X_O2 * M_O2) / (X_H2O * M_H2O + X_N2 * M_N2 + X_O2 * M_O2)
     
     # --- State B6: After Expansion --- 
@@ -213,11 +216,14 @@ def brayton_cycle_h2(
     #print(f"HB3 {HB3}")
 
     W_comp = m_air * (HB4 - HB3)
-    #print(f"Compression work: {W_comp:.2f}")
+    print(f"Compression work: {W_comp:.2f}")
     W_turb = m_H2O * (HB5_H2O - HB6_H2O) + m_O2_excess*(HB5_O2 - HB6_O2) + m_N2_out*(HB5_N2 - HB6_N2)
-    #print(f"Turbine work out: {W_turb:.2f}")
+    W_turb2 = m_H2*(HB1-HB2)
+    print(f"Turbine work out: {W_turb:.2f}")
+    work_comp = (W_turb + W_turb2) / W_comp
+    print(f"Work over comp work: {work_comp:.2f}")
 
-    W_net = W_turb - W_comp
+    W_net = W_turb - W_comp + W_turb2
 
     States = dict()
     States['B0'] = (PB0,TB0,HB0,SB0)
@@ -238,7 +244,5 @@ if __name__ == "__main__":
 
     # Run the Brayton cycle function
     Dog = brayton_cycle_h2(
-        m_H2
-    )
-
-    print(Dog)
+        m_H2,500+273.15,3e7,1.92
+        )
