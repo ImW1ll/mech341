@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import CoolProp
 from CoolProp.CoolProp import PropsSI
-from CoolProp.CoolProp import StateContainer, PropertyPlot
+from CoolProp.Plots import PropertyPlot, Common
+from CoolProp.Plots.SimpleCycles import StateContainer
 from brayton import *
 from sensible_enthalpy import sensible_enthalpy_PT
 
@@ -50,18 +52,6 @@ S2 = PropsSI('S','P',P2,'H',H2, fluid)
 T2 = PropsSI('T','P',P2,'H',H2, fluid)
 Sens2 = sensible_enthalpy_PT(P2, T2)
 
-# === Process 1-2: Isentropic Compression ===
-
-cycle_states_12 = StateContainer()
-cycle_states_12[0,'H'] = H1
-cycle_states_12[0,'S'] = S1
-cycle_states_12[0,'T'] = T1
-cycle_states_12[0,'P'] = P1
-cycle_states_12[1,'H'] = H2s
-cycle_states_12[1,'S'] = S1
-cycle_states_12[1,'T'] = T2
-cycle_states_12[1,'P'] = P2
-
 # --- State 3: After OFWH 1 ---
 P3 = P_bleed_1
 Q3 = 0
@@ -70,18 +60,6 @@ S3 = PropsSI('S','P',P3,'Q',Q3,fluid)
 T3 = PropsSI('T','P',P3,'Q',Q3,fluid)
 Sens3 = sensible_enthalpy_PT(P3, T3)
 
-# === Process 2-3: Isobaric Heat Addition ===
-
-cycle_states_23 = StateContainer()
-cycle_states_23[0,'H'] = H2s
-cycle_states_23[0,'S'] = S2
-cycle_states_23[0,'T'] = T2
-cycle_states_23[0,'P'] = P2
-cycle_states_23[1,'H'] = H3
-cycle_states_23[1,'S'] = S3
-cycle_states_23[1,'T'] = T3
-cycle_states_23[1,'P'] = P3
-
 # --- State 4: After compressor 2 ---
 P4 = P_boiler
 H4s = PropsSI('H','P',P4,'S',S3,fluid)
@@ -89,18 +67,6 @@ H4 = H3 + (H4s - H3) / eff_pump
 S4 = PropsSI('S','P',P4,'H',H4,fluid)
 T4 = PropsSI('T','P',P4,'H',H4,fluid)
 Sens4 = sensible_enthalpy_PT(P4, T4)
-
-# === Process 3-4: Isentropic Compression ===
-
-cycle_states_34 = StateContainer()
-cycle_states_34[0,'H'] = H3
-cycle_states_34[0,'S'] = S3
-cycle_states_34[0,'T'] = T3
-cycle_states_34[0,'P'] = P3
-cycle_states_34[1,'H'] = H4s
-cycle_states_34[1,'S'] = S3
-cycle_states_34[1,'T'] = T4
-cycle_states_34[1,'P'] = P4
 
 # --- State 5: After boiler (to turbine inlet) ---
 # Add Q_boiler/m_dot to H3
@@ -111,19 +77,6 @@ S5 = PropsSI('S','P',P5,'H',H5, fluid)
 Sens5 = sensible_enthalpy_PT(P5, T5)
 assert T5 < T_boiler_out, "Temperature out of boiler is too big bozzo"
 
-# === Process 4-5: Isobaric Heating (Supercrit) ===
-
-cycle_states_45 = StateContainer()
-cycle_states_45[0,'H'] = H4s
-cycle_states_45[0,'S'] = S3
-cycle_states_45[0,'T'] = T4
-cycle_states_45[0,'P'] = P4
-cycle_states_45[1,'H'] = H5
-cycle_states_45[1,'S'] = S5
-cycle_states_45[1,'T'] = T5
-cycle_states_45[1,'P'] = P5
-
-
 # --- State 6: After first turbine ---
 P6 = P_stage_1_out
 H6s = PropsSI('H','S',S5,'P',P6, fluid)
@@ -131,18 +84,6 @@ H6 = H5 + (H6s - H5) * eff_turbine
 T6 = PropsSI('T','P',P6,'H',H6, fluid)
 S6 = PropsSI('S','P',P6,'H',H6, fluid)
 Sens6 = sensible_enthalpy_PT(P6, T6)
-
-# === Process 5-6: Isentropic Expansion ===
-
-cycle_states_56 = StateContainer()
-cycle_states_56[0,'H'] = H5
-cycle_states_56[0,'S'] = S5
-cycle_states_56[0,'T'] = T5
-cycle_states_56[0,'P'] = P5
-cycle_states_56[1,'H'] = H6s
-cycle_states_56[1,'S'] = S5
-cycle_states_56[1,'T'] = T6
-cycle_states_56[1,'P'] = P6
 
 # --- State 6I: First Bled Water ---
 P6I = P_bleed_1
@@ -155,48 +96,12 @@ Sens6I = sensible_enthalpy_PT(P6I, T6I)
 # Bleeding fraction
 x_frac = (H3 - H2) / (H6I - H2)
 
-# === Process 5-6I: Water Bleed Isentropic Expansion ===
-
-cycle_states_56I = StateContainer()
-cycle_states_56I[0,'H'] = H5
-cycle_states_56I[0,'S'] = S5
-cycle_states_56I[0,'T'] = T5
-cycle_states_56I[0,'P'] = P5
-cycle_states_56I[1,'H'] = H6Is
-cycle_states_56I[1,'S'] = S5
-cycle_states_56I[1,'T'] = T6I
-cycle_states_56I[1,'P'] = P6I
-
-# === Process 6I-3: Regeneration
-
-cycle_states_6I3 = StateContainer()
-cycle_states_6I3[0,'H'] = H6Is
-cycle_states_6I3[0,'S'] = S5
-cycle_states_6I3[0,'T'] = T6
-cycle_states_6I3[0,'P'] = P6
-cycle_states_6I3[1,'H'] = H3
-cycle_states_6I3[1,'S'] = S3
-cycle_states_6I3[1,'T'] = T3
-cycle_states_6I3[1,'P'] = P3
-
 # ---- State 7: After reheat between turbine 1 and turbine 2 -----
 H7 = H6 + Q_preheater_total / (m_dot * (1 - x_frac))
 P7 = P_bleed_1
 S7 = PropsSI('S','P',P7,'H',H7,fluid)
 T7 = PropsSI('T','P',P7,'H',H7,fluid)
 Sens7 = sensible_enthalpy_PT(P7, T7)
-
-# === Process 6-7: Isobaric Heat Addition === 
-
-cycle_states_67 = StateContainer()
-cycle_states_67[0,'H'] = H6s
-cycle_states_67[0,'S'] = S5
-cycle_states_67[0,'T'] = T6
-cycle_states_67[0,'P'] = P6
-cycle_states_67[1,'H'] = H7
-cycle_states_67[1,'S'] = S7
-cycle_states_67[1,'T'] = T7
-cycle_states_67[1,'P'] = P7
 
 # --- State 8: After second turbine, before condenser ---
 P8 = P_condenser
@@ -206,30 +111,6 @@ H8 = H7 - (H7 - H8s) * eff_turbine
 T8 = PropsSI('T','P',P8,'H',H8, fluid)
 S8 = PropsSI('S','P',P8,'H',H8, fluid)
 Sens8 = sensible_enthalpy_PT(P8, T8)
-
-# === Process 7-8: Isentropic Expansion ===
-
-cycle_states_78 = StateContainer()
-cycle_states_78[0,'H'] = H7
-cycle_states_78[0,'S'] = S7
-cycle_states_78[0,'T'] = T7
-cycle_states_78[0,'P'] = P7
-cycle_states_78[1,'H'] = H8s
-cycle_states_78[1,'S'] = S7
-cycle_states_78[1,'T'] = T8
-cycle_states_78[1,'P'] = P8
-
-# === Process 8-1: Isobaric Cooling ===
-
-cycle_states_81 = StateContainer()
-cycle_states_81[0,'H'] = H8s
-cycle_states_81[0,'S'] = S7
-cycle_states_81[0,'T'] = T8
-cycle_states_81[0,'P'] = P8
-cycle_states_81[1,'H'] = H1
-cycle_states_81[1,'S'] = S1
-cycle_states_81[1,'T'] = T1
-cycle_states_81[1,'P'] = P1
 
 #--------------------------%--------------------------
 #              Mass Flow Rate Calculations
@@ -318,8 +199,8 @@ eta_comp = 0.88        # compressor isentropic efficiency
 eta_turb = 0.90        # turbine isentropic efficiency
 
 # Yeah I know I made it simpler
-brayton_states_and_work = brayton_cycle_h2(m_H2,T_boiler_out,PH2,2)
-W_br = brayton_states_and_work['Work']
+BStates = brayton_cycle_h2(m_H2,T_boiler_out,PH2,2)
+W_br = BStates['Work']
 
 # ================= Output results =======================
 
@@ -399,7 +280,30 @@ states_data = [
         'S (kJ/kg.K)': round(S8/1e3, 2),
         'Sens. H': Sens8 / 1000,
     },
-    
+    {
+        'State': 'B0',
+        'P (MPa)': round(BStates['B0'][0]/1e6, 2),
+        'T (C)': round(BStates['B0'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B0'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B0'][3]/1e3, 2),
+        'Sens. H': Sens8 / 1000,
+    },
+    {
+        'State': '8',
+        'P (MPa)': round(BStates['B1'][0]/1e6, 2),
+        'T (C)': round(BStates['B1'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B1'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B1'][3]/1e3, 2),
+        'Sens. H': Sens8 / 1000,
+    },
+    {
+        'State': '8',
+        'P (MPa)': round(P8/1e6, 2),
+        'T (C)': round(T8 - 273.15, 2),
+        'H (kJ/kg)': round(H8/1e3, 2),
+        'S (kJ/kg.K)': round(S8/1e3, 2),
+        'Sens. H': Sens8 / 1000,
+    },
 ]
 
 print(f"New brayton shaft power {W_br:.2f}")
@@ -420,13 +324,83 @@ print(df_states)
 #                     T-s Diagram
 #--------------------------%--------------------------
 
-process_states = [cycle_states_12,cycle_states_23,cycle_states_34,
-                  cycle_states_45,cycle_states_56,cycle_states_56I,
-                  cycle_states_67,cycle_states_78,cycle_states_81]
-for state in process_states:
-    pp.draw_process(state)
-pp.draw_process(cycle_states_6I3,line_opts = {'linestyle':'dashed'})
-pp.show()
+# Create a Temperature-Entropy (T-S) plot for water
+fig, ax = plt.subplots()
+ax.set_xlim(0,10)
+ax.set_ylim(275,850)
+plot = PropertyPlot("HEOS::Water", "TS",axis=ax)
+plot.calc_isolines(CoolProp.iQ,num=10)
+plot.calc_isolines(CoolProp.iP,num=20)
+
+def isobaric_process_state(isobar,low_val,high_val,divisions,use_S=False):
+    pressure = 25e6  # 25 MPa
+
+    # Define temperatures for the two states and generate intermediate points
+
+    S_values = 0
+    if use_S == True:
+        S_value = np.linspace(low_val, high_val, divisions)  # Intermediate temperatures (K)
+        S_values = list()
+        for element in S_value:
+            S_values.append(element.item())
+        T_values = [PropsSI('T', 'S', S, 'P', isobar, 'Water') for S in S_values]
+    else:
+        T_value = np.linspace(low_val, high_val, divisions)  # Intermediate temperatures (K)
+        T_values = list()
+        for element in T_value:
+            T_values.append(element.item())
+        S_values = [PropsSI('S', 'T', T, 'P', isobar, 'Water') for T in T_values]
+
+    # Create a StateContainer to hold the states
+    states = StateContainer()
+    state_new = list()
+    for n in range(0,len(S_values)):
+        state_new.append({'T':T_values[n],'S':S_values[n]})
+
+    for new in state_new:
+        states.append(new)
+
+    return states
+
+def isentropic_process_states(isentrope,low_temp,high_temp,divisions):
+    
+    T_value = np.linspace(low_temp, high_temp, divisions)  # Intermediate temperatures (K)
+    T_values = list()
+    for element in T_value:
+        T_values.append(element.item())
+
+    # Create a StateContainer to hold the states
+    states = StateContainer()
+    state_new = list()
+    for n in range(0,len(T_values)):
+        state_new.append({'T':T_values[n],'S':isentrope})
+
+    for new in state_new:
+        states.append(new)
+
+    return states
+
+states = [
+    isentropic_process_states(S1,T1,PropsSI('T','H',H2s,'S',S1,fluid),50),
+    isentropic_process_states(S3,T3,PropsSI('T','H',H4s,'S',S3,fluid),50),
+    isobaric_process_state(P_boiler,T4,T5,100),
+    isentropic_process_states(S5,PropsSI('T','H',H6s,'S',S5,fluid),T5,50),
+    isobaric_process_state(P6,S5,S7,75,True),
+    isentropic_process_states(S7,T8,PropsSI('T','P',P6,'S',S7,fluid),50),
+]
+cycle_diagram_23 = isobaric_process_state(P2,T2,584.147,50) # Had to do these outside list to comply with PropsSI
+cycle_diagram_81 = isobaric_process_state(P8,S1,S7,100,True) # I know you will hate what I am doing
+cycle_diagram_6I3 = isobaric_process_state(P3,S3,S5,75,True) 
+
+# Draw the isobaric process on the T-S diagram
+for state in states:
+    plot.draw_process(state, line_opts={"color": "blue"})
+plot.draw_process(cycle_diagram_6I3,line_opts={"linestyle": "-","color": "green"})
+plot.draw_process(cycle_diagram_23, line_opts={"color": "blue"})
+plot.draw_process(cycle_diagram_81, line_opts={"color": "blue"})
+
+# Customize and display the plot
+plot.show()
 
 # If you want to display as a Matplotlib table:
 fig, ax = plt.subplots()

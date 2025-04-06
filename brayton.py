@@ -59,7 +59,7 @@ def brayton_cycle_h2(
     m_H2,               # mass flow hydrogen
     TB0,                # Temperature of Hydrogen before heat exchange (K)
     PB0,                # Pressure of hydrogen before heat exchange (Pa)
-    lmdba=2.1,                # Air-to-fuel ratio for mixing
+    lmdba=2.1,          # Air-to-fuel ratio for mixing
     fuel_name = 'Hydrogen',
     eta_turb = 0.88,
     eta_comp = 0.88,
@@ -82,7 +82,6 @@ def brayton_cycle_h2(
     HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
     reheat = m_H2*(HB0 - HB1) #2370615.719104707, so way down on this one
     print(f"Reheat is : {reheat/(1e6)}")
-
 
     # --- State B2: Hydrogen after expansion ---
     PB2 = 3e6                                      # Teacher said 25-30bar with 1800K makes sense
@@ -169,8 +168,6 @@ def brayton_cycle_h2(
     T_B5_guess = 1800
     TB5 = fsolve(energy_balance, T_B5_guess)[0]
     print(f"Temperature of the products after combustion: {TB5:.1f} K")
-    
-   
 
     # Enthalpy
     HB5_H2O = PropsSI('H','P',PB5_H2O,'T',TB5,'Water')
