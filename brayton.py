@@ -76,7 +76,7 @@ def brayton_cycle_h2(
     HB0 = PropsSI('H', 'P', PB0, 'T', TB0, fuel_name)
 
     # --- State B1: Hydrogen exiting reheat ---
-    TB1 = 340+273.15
+    TB1 = 375+273.15
     PB1 = PB0
     SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
     HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)

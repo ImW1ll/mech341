@@ -15,7 +15,8 @@ m_al = 9  # kg/s
 q_preheater_per_al = 1e6  # J/kg
 q_reheat_per_al = 0
 q_boiler_per_al = 12.5e6 - q_reheat_per_al # Requires revision for exactitude
-Q_preheater_total = q_preheater_per_al * m_al
+#Q_preheater_total = q_preheater_per_al * m_al
+Q_preheater_total =  3.3069e6 + 1.85289e6 # hard coded value 2.3706e6 +
 q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
