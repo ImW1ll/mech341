@@ -80,7 +80,8 @@ def brayton_cycle_h2(
     PB1 = PB0
     SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
     HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
-    # reheat = m_H2*(HB0 - HB1) 2370615.719104707, so way down on this one
+    reheat = m_H2*(HB0 - HB1) #2370615.719104707, so way down on this one
+    print(f"Reheat is : {reheat/(1e6)}")
 
 
     # --- State B2: Hydrogen after expansion ---

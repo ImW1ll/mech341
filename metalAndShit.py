@@ -219,3 +219,16 @@ def aluminum_heat_rate_out(m_Al,m_H2O_rankine):
     H_dot_out_f0 = H_dot_Al2O3_f0 + H_dot_H2_f0
 
     return H_dot_out_s - H_dot_in_s # this should be the net work
+
+
+
+
+
+
+# checking reheat values
+if __name__ == "__main__":
+    # First we need to check reheat in alumina
+    HAL_high  = enthalpy_alumina_highT(500+273.15, 3e7)
+    HAL_low  = enthalpy_alumina_highT(330+273.15, 3e7)
+    reheat_q = (HAL_high - HAL_low)*17.005 # that's mass flow alumina for 9 kg of aluminium
+    print(reheat_q/1e6)
