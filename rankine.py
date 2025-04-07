@@ -287,23 +287,55 @@ states_data = [
         'T (C)': round(BStates['B0'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B0'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B0'][3]/1e3, 2),
-        'Sens. H': Sens8 / 1000,
+        'Sens. H': sensible_enthalpy_PT(BStates['B0'][0],BStates['B0'][1],fluid='Hydrogen') / 1000,
     },
     {
-        'State': '8',
+        'State': 'B1',
         'P (MPa)': round(BStates['B1'][0]/1e6, 2),
         'T (C)': round(BStates['B1'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B1'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B1'][3]/1e3, 2),
-        'Sens. H': Sens8 / 1000,
+        'Sens. H': sensible_enthalpy_PT(BStates['B1'][0],BStates['B1'][1],fluid='Hydrogen') / 1000,
     },
     {
-        'State': '8',
-        'P (MPa)': round(P8/1e6, 2),
-        'T (C)': round(T8 - 273.15, 2),
-        'H (kJ/kg)': round(H8/1e3, 2),
-        'S (kJ/kg.K)': round(S8/1e3, 2),
-        'Sens. H': Sens8 / 1000,
+        'State': 'B2',
+        'P (MPa)': round(BStates['B2'][0]/1e6, 2),
+        'T (C)': round(BStates['B2'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B2'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B2'][3]/1e3, 2),
+        'Sens. H': sensible_enthalpy_PT(BStates['B2'][0],BStates['B2'][1],fluid='Hydrogen') / 1000,
+    },
+    {
+        'State': 'B3',
+        'P (MPa)': round(BStates['B3'][0]/1e6, 2),
+        'T (C)': round(BStates['B3'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B3'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B3'][3]/1e3, 2),
+        'Sens. H': sensible_enthalpy_PT(BStates['B3'][0],BStates['B3'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') / 1000,
+    },
+    {
+        'State': 'B4',
+        'P (MPa)': round(BStates['B4'][0]/1e6, 2),
+        'T (C)': round(BStates['B4'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B4'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B4'][3]/1e3, 2),
+        'Sens. H': sensible_enthalpy_PT(BStates['B4'][0],BStates['B4'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') / 1000,
+    },
+    {
+        'State': 'B5',
+        'P (MPa)': round(BStates['B5'][0]/1e6, 2),
+        'T (C)': round(BStates['B5'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B5'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B5'][3]/1e3, 2),
+        'Sens. H': sensible_enthalpy_PT(BStates['B5'][0],BStates['B5'][1],fluid='Air') / 1000, # Please check this and put in correct mixture proportions
+    },
+    {
+        'State': 'B6',
+        'P (MPa)': round(BStates['B6'][0]/1e6, 2),
+        'T (C)': round(BStates['B6'][1] - 273.15, 2),
+        'H (kJ/kg)': round(BStates['B6'][2]/1e3, 2),
+        'S (kJ/kg.K)': round(BStates['B6'][3]/1e3, 2),
+        'Sens. H': sensible_enthalpy_PT(BStates['B6'][0],BStates['B6'][1],fluid='Air') / 1000,
     },
 ]
 
@@ -383,22 +415,22 @@ def isentropic_process_states(isentrope,low_temp,high_temp,divisions):
 
 states = [
     isentropic_process_states(S1,T1,PropsSI('T','H',H2s,'S',S1,fluid),50),
+    isobaric_process_state(P2,T2,584.147,50),
     isentropic_process_states(S3,T3,PropsSI('T','H',H4s,'S',S3,fluid),50),
     isobaric_process_state(P_boiler,T4,T5,100),
     isentropic_process_states(S5,PropsSI('T','H',H6s,'S',S5,fluid),T5,50),
     isobaric_process_state(P6,S5,S7,75,True),
     isentropic_process_states(S7,T8,PropsSI('T','P',P6,'S',S7,fluid),50),
+    isobaric_process_state(P8,S1,S7,100,True)
 ]
-cycle_diagram_23 = isobaric_process_state(P2,T2,584.147,50) # Had to do these outside list to comply with PropsSI
-cycle_diagram_81 = isobaric_process_state(P8,S1,S7,100,True) # I know you will hate what I am doing
+# cycle_diagram_23 =  # Had to do these outside list to comply with PropsSI
+#cycle_diagram_81 = isobaric_process_state(P8,S1,S7,100,True) # I know you will hate what I am doing
 cycle_diagram_6I3 = isobaric_process_state(P3,S3,S5,75,True) 
 
 # Draw the isobaric process on the T-S diagram
 for state in states:
     plot.draw_process(state, line_opts={"color": "blue"})
 plot.draw_process(cycle_diagram_6I3,line_opts={"linestyle": "-","color": "green"})
-plot.draw_process(cycle_diagram_23, line_opts={"color": "blue"})
-plot.draw_process(cycle_diagram_81, line_opts={"color": "blue"})
 
 # Customize and display the plot
 plot.show()

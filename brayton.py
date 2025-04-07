@@ -116,7 +116,7 @@ def brayton_cycle_h2(
     SB4_N2 = PropsSI('S', 'P', PB4_N2, 'H', HB4_N2, 'Nitrogen')
     HB4 = 0.232 * HB4_O2 + 0.768 * HB4_N2
     SB4 = 0.232 * SB4_O2 + 0.768 * SB4_N2
-    TB4 = HB4 / cp_air_j_per_kgK(799.5) # Guessed and checked
+    TB4 = fsolve(TB4 - HB4 / cp_air_j_per_kgK(TB4))[0] # Guessed and checked
 
     # --- State B5: After Combustion --- we cooking here
     n_H2 = m_H2 / M_H2
@@ -200,7 +200,7 @@ def brayton_cycle_h2(
     SB6_O2  = PropsSI('S','P',PB6_O2,'H',HB6_O2,'Oxygen')
     SB6_N2  = PropsSI('S','P',PB6_O2,'H',HB6_N2,'Nitrogen')
     SB6 = (SB6_H2O * X_H2O * M_H2O + SB6_N2 * X_N2 * M_N2 + SB6_O2 * X_O2 * M_O2) / (X_H2O * M_H2O + X_N2 * M_N2 + X_O2 * M_O2)
-    TB6 = HB6 / cp_air_j_per_kgK(600) # idk if this is right
+    TB6 = fsolve(TB6 - HB6 / cp_air_j_per_kgK(TB6))[0] # idk if this is right
 
     # And then idk mother nature will manage the rest
 
