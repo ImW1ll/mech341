@@ -327,7 +327,7 @@ states_data = [
         'T (C)': round(BStates['B5'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B5'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B5'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B5'][0],BStates['B5'][1],fluid='Air') / 1000, # Please check this and put in correct mixture proportions
+        'Sens. H': sensible_enthalpy_PT(BStates['B5'][0],BStates['B5'][1],fluid='CombustionProducts') / 1000, # Please check this and put in correct mixture proportions
     },
     {
         'State': 'B6',
@@ -335,7 +335,7 @@ states_data = [
         'T (C)': round(BStates['B6'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B6'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B6'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B6'][0],BStates['B6'][1],fluid='Air') / 1000,
+        'Sens. H': sensible_enthalpy_PT(BStates['B6'][0],BStates['B6'][1],fluid='CombustionProducts') / 1000,
     },
 ]
 

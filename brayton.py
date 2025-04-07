@@ -81,7 +81,7 @@ def brayton_cycle_h2(
     SB1 = PropsSI('S','T',TB1,'P',PB1,fuel_name)
     HB1 = PropsSI('H','T',TB1,'P',PB1,fuel_name)
     reheat = m_H2*(HB0 - HB1) #2370615.719104707, so way down on this one
-    print(f"Reheat is : {reheat/(1e6)}")
+    print(f"H2 reheat is : {reheat/(1e6)}")
 
     # --- State B2: Hydrogen after expansion ---
     PB2 = 3e6                                      # Teacher said 25-30bar with 1800K makes sense
@@ -116,7 +116,15 @@ def brayton_cycle_h2(
     SB4_N2 = PropsSI('S', 'P', PB4_N2, 'H', HB4_N2, 'Nitrogen')
     HB4 = 0.232 * HB4_O2 + 0.768 * HB4_N2
     SB4 = 0.232 * SB4_O2 + 0.768 * SB4_N2
-    TB4 = fsolve(TB4 - HB4 / cp_air_j_per_kgK(TB4))[0] # Guessed and checked
+    def find_TB4(T_guess):
+        h_O2 = PropsSI('H', 'P', PB4_O2, 'T', T_guess, 'Oxygen')
+        h_N2 = PropsSI('H', 'P', PB4_N2, 'T', T_guess, 'Nitrogen')
+        H_mix = 0.232 * h_O2 + 0.768 * h_N2
+        return H_mix - HB4
+
+    TB4_guess = 800  # or whatever guess
+    TB4 = fsolve(find_TB4, TB4_guess)[0]
+    print(f"TB4 is : {TB4}")
 
     # --- State B5: After Combustion --- we cooking here
     n_H2 = m_H2 / M_H2
@@ -168,6 +176,7 @@ def brayton_cycle_h2(
     T_B5_guess = 1800
     TB5 = fsolve(energy_balance, T_B5_guess)[0]
     print(f"Temperature of the products after combustion: {TB5:.1f} K")
+    #print(f"The composition is : Water {X_H2O}, O2 {X_O2}, Nitro {X_N2}"), just to make sure of what we have
 
     # Enthalpy
     HB5_H2O = PropsSI('H','P',PB5_H2O,'T',TB5,'Water')
@@ -200,7 +209,16 @@ def brayton_cycle_h2(
     SB6_O2  = PropsSI('S','P',PB6_O2,'H',HB6_O2,'Oxygen')
     SB6_N2  = PropsSI('S','P',PB6_O2,'H',HB6_N2,'Nitrogen')
     SB6 = (SB6_H2O * X_H2O * M_H2O + SB6_N2 * X_N2 * M_N2 + SB6_O2 * X_O2 * M_O2) / (X_H2O * M_H2O + X_N2 * M_N2 + X_O2 * M_O2)
-    TB6 = fsolve(TB6 - HB6 / cp_air_j_per_kgK(TB6))[0] # idk if this is right
+
+    def find_TB6(T_guess):
+        h_O2 = PropsSI('H', 'P', PB6_O2, 'T', T_guess, 'Oxygen')
+        h_H20 = PropsSI('H', 'P', PB6_H2O, 'T', T_guess, 'Water')
+        h_N2 = PropsSI('H', 'P', PB6_N2, 'T', T_guess, 'Nitrogen')
+        H_mix = X_O2 * h_O2 + X_N2* h_N2 + X_H2O * h_H20
+        return H_mix - HB4
+
+    TB6_guess = 800  # or whatever guess
+    TB6 = fsolve(find_TB6, TB6_guess)[0]
 
     # And then idk mother nature will manage the rest
 
