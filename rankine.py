@@ -215,7 +215,7 @@ states_data = [
         'T (C)': round(T1 - 273.15, 2),
         'H (kJ/kg)': round(H1/1e3, 2),
         'S (kJ/kg.K)': round(S1/1e3, 2),
-        'Sens. H': Sens1 / 1000,
+        'Sens. H': round(Sens1 /1000,2),
     },
     {
         'State': '2',
@@ -223,7 +223,7 @@ states_data = [
         'T (C)': round(T2 - 273.15, 2),
         'H (kJ/kg)': round(H2/1e3, 2),
         'S (kJ/kg.K)': round(S2/1e3, 2),
-        'Sens. H': Sens2 / 1000,
+        'Sens. H': round(Sens2 /1000,2),
     },
     {
         'State': '3',
@@ -231,7 +231,7 @@ states_data = [
         'T (C)': round(T3 - 273.15, 2),
         'H (kJ/kg)': round(H3/1e3, 2),
         'S (kJ/kg.K)': round(S3/1e3, 2),
-        'Sens. H': Sens3 / 1000,
+        'Sens. H': round(Sens3 /1000,2),
     },
     {
         'State': '4',
@@ -239,7 +239,7 @@ states_data = [
         'T (C)': round(T4 - 273.15, 2),
         'H (kJ/kg)': round(H4/1e3, 2),
         'S (kJ/kg.K)': round(S4/1e3, 2),
-        'Sens. H': Sens4 / 1000,
+        'Sens. H': round(Sens4 /1000,2),
     },
     {
         'State': '5',
@@ -247,7 +247,7 @@ states_data = [
         'T (C)': round(T5 - 273.15, 2),
         'H (kJ/kg)': round(H5/1e3, 2),
         'S (kJ/kg.K)': round(S5/1e3, 2),
-        'Sens. H': Sens5 / 1000,
+        'Sens. H': round(Sens5 /1000,2),
     },
     {
         'State': '6',
@@ -255,7 +255,7 @@ states_data = [
         'T (C)': round(T6 - 273.15, 2),
         'H (kJ/kg)': round(H6/1e3, 2),
         'S (kJ/kg.K)': round(S6/1e3, 2),
-        'Sens. H': Sens6 / 1000,
+        'Sens. H': round(Sens6 /1000,2),
     },
     {
         'State': '6I',
@@ -263,7 +263,7 @@ states_data = [
         'T (C)': round(T6I - 273.15, 2),
         'H (kJ/kg)': round(H6I/1e3, 2),
         'S (kJ/kg.K)': round(S6I/1e3, 2),
-        'Sens. H': Sens3 / 1000,
+        'Sens. H': round(Sens3 /1000,2),
     },
     {
         'State': '7',
@@ -271,7 +271,7 @@ states_data = [
         'T (C)': round(T7 - 273.15, 2),
         'H (kJ/kg)': round(H7/1e3, 2),
         'S (kJ/kg.K)': round(S7/1e3, 2),
-        'Sens. H': Sens7 / 1000,
+        'Sens. H': round(Sens7 /1000,2),
     },
     {
         'State': '8',
@@ -279,7 +279,7 @@ states_data = [
         'T (C)': round(T8 - 273.15, 2),
         'H (kJ/kg)': round(H8/1e3, 2),
         'S (kJ/kg.K)': round(S8/1e3, 2),
-        'Sens. H': Sens8 / 1000,
+        'Sens. H': round(Sens8 /1000,2),
     },
     {
         'State': 'B0',
@@ -287,7 +287,7 @@ states_data = [
         'T (C)': round(BStates['B0'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B0'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B0'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B0'][0],BStates['B0'][1],fluid='Hydrogen') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B0'][0],BStates['B0'][1],fluid='Hydrogen') /1000,2),
     },
     {
         'State': 'B1',
@@ -295,7 +295,7 @@ states_data = [
         'T (C)': round(BStates['B1'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B1'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B1'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B1'][0],BStates['B1'][1],fluid='Hydrogen') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B1'][0],BStates['B1'][1],fluid='Hydrogen') /1000,2),
     },
     {
         'State': 'B2',
@@ -303,7 +303,7 @@ states_data = [
         'T (C)': round(BStates['B2'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B2'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B2'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B2'][0],BStates['B2'][1],fluid='Hydrogen') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B2'][0],BStates['B2'][1],fluid='Hydrogen') /1000,2),
     },
     {
         'State': 'B3',
@@ -311,7 +311,7 @@ states_data = [
         'T (C)': round(BStates['B3'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B3'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B3'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B3'][0],BStates['B3'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B3'][0],BStates['B3'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') /1000,2),
     },
     {
         'State': 'B4',
@@ -319,7 +319,7 @@ states_data = [
         'T (C)': round(BStates['B4'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B4'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B4'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B4'][0],BStates['B4'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B4'][0],BStates['B4'][1],fluid='Nitrogen[0.79]&Oxygen[0.21]') / 1000,2),
     },
     {
         'State': 'B5',
@@ -327,7 +327,7 @@ states_data = [
         'T (C)': round(BStates['B5'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B5'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B5'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B5'][0],BStates['B5'][1],fluid='CombustionProducts') / 1000, # Please check this and put in correct mixture proportions
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B5'][0],BStates['B5'][1],fluid='CombustionProducts') / 1000,2), # Please check this and put in correct mixture proportions
     },
     {
         'State': 'B6',
@@ -335,7 +335,7 @@ states_data = [
         'T (C)': round(BStates['B6'][1] - 273.15, 2),
         'H (kJ/kg)': round(BStates['B6'][2]/1e3, 2),
         'S (kJ/kg.K)': round(BStates['B6'][3]/1e3, 2),
-        'Sens. H': sensible_enthalpy_PT(BStates['B6'][0],BStates['B6'][1],fluid='CombustionProducts') / 1000,
+        'Sens. H': round(sensible_enthalpy_PT(BStates['B6'][0],BStates['B6'][1],fluid='CombustionProducts') / 1000,2),
     },
 ]
 

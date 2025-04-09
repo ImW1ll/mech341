@@ -48,7 +48,7 @@ def cp_O2_j_per_kgK(T):
         d = 0.788313
         e = -0.741599
     else:
-        AssertionError("Dude you stupid part 2")
+        AssertionError("Dude you stupid part 2, electric boogaloo")
     return (a + b*T + c*T**2 + d*T**3 + e/T**2) / 0.032
 
 # =============== Main Body ========================
