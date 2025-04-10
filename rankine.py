@@ -10,8 +10,8 @@ from sensible_enthalpy import sensible_enthalpy_PT
 
 # Your existing parameters and computed states
 
-m_dot = 70  # kg/s
-m_al = 9  # kg/s
+m_dot = 70*1.01  # kg/s
+m_al = 9*1.01  # kg/s
 q_preheater_per_al = 1e6  # J/kg
 q_reheat_per_al = 0
 #q_boiler_per_al = 12.5e6 - q_reheat_per_al # Requires revision for exactitude
@@ -24,9 +24,9 @@ Q_boiler_total = q_boiler_per_al * m_al
 P_boiler   = 25e6   # Steam generation pressure
 P_stage_1_out = 8e6
 P_bleed_1  = 10e6    # Pressure at which turbine 1 bleeds steam
-P_condenser = 0.01e6 # Expansion continues to condenser pressure         
+P_condenser = 0.03e6 # Expansion continues to condenser pressure         
 T_boiler_out = 773.15 # well at least we need to limit it
-eff_turbine = 0.85
+eff_turbine = 0.825
 eff_pump = 0.9
 fluid = 'Water'
 
@@ -113,6 +113,8 @@ H8 = H7 - (H7 - H8s) * eff_turbine
 T8 = PropsSI('T','P',P8,'H',H8, fluid)
 S8 = PropsSI('S','P',P8,'H',H8, fluid)
 Sens8 = sensible_enthalpy_PT(P8, T8)
+Q8 = PropsSI('Q', 'S', S8, 'P', P8, fluid)
+print(f"Quality after turbine 2 is: {Q8}")
 
 #--------------------------%--------------------------
 #              Mass Flow Rate Calculations
