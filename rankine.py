@@ -17,7 +17,7 @@ q_reheat_per_al = 0
 #q_boiler_per_al = 12.5e6 - q_reheat_per_al # Requires revision for exactitude
 q_boiler_per_al = 13.4e6
 #Q_preheater_total = q_preheater_per_al * m_al
-Q_preheater_total =  3.3069e6 + 1.85289e6 # hard coded value 2.3706e6 +
+Q_preheater_total =  3.3069e6 * 1.01 + 1.87289e6 # hard coded value 2.3706e6 +
 q_reheat_total = q_reheat_per_al * m_al
 Q_boiler_total = q_boiler_per_al * m_al
  
@@ -114,7 +114,7 @@ T8 = PropsSI('T','P',P8,'H',H8, fluid)
 S8 = PropsSI('S','P',P8,'H',H8, fluid)
 Sens8 = sensible_enthalpy_PT(P8, T8)
 Q8 = PropsSI('Q', 'S', S8, 'P', P8, fluid)
-print(f"Quality after turbine 2 is: {Q8}")
+print(f"Quality after turbine 2 is: {Q8:.2f}")
 
 #--------------------------%--------------------------
 #              Mass Flow Rate Calculations
